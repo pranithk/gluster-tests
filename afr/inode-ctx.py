@@ -2,7 +2,9 @@ import os
 import time
 import stat
 import xattr
+from socket import gethostname
 
+HOSTNAME = gethostname()
 def execute (cmd):
         status = os.system ("echo \"" + cmd +"\" && " +cmd)
         return
@@ -39,7 +41,8 @@ def init_test_bed ():
         os.chdir ("/home/pranith")
         execute ("sudo rm -rf /tmp/0 /tmp/1 /tmp/2 /tmp/3")
         execute ("sudo umount /mnt/client")
-        execute ("sudo gluster volume create vol replica 4 `hostname`:/tmp/0 `hostname`:/tmp/1 `hostname`:/tmp/2 `hostname`:/tmp/3")
+        execute ("sudo gluster volume create vol replica 4 `hostname`:/tmp/0 `hostname`:/tmp/1 `hostname`:/tmp/2 `hostname`:/tmp/3 --mode=script")
+        execute ("sudo gluster volume set vol self-heal-daemon off")
         execute ("sudo gluster volume set vol performance.quick-read off")
         execute ("sudo gluster volume set vol performance.io-cache off")
         execute ("sudo gluster volume set vol performance.write-behind off")
@@ -73,7 +76,7 @@ def disable_self_heal ():
 
 
 def read_child_is_set_and_up (inode_write, w_args, inode_read, r_args, verify, expected):
-        execute ("sudo kill -9 `cat /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-0.pid /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-1.pid /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-2.pid`");
+        execute ("sudo kill -9 `cat /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-0.pid /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-1.pid /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-2.pid`");
         fop (inode_write, w_args)
         execute ("sudo gluster volume start vol force")
         time.sleep (20)
@@ -81,22 +84,22 @@ def read_child_is_set_and_up (inode_write, w_args, inode_read, r_args, verify, e
 
 
 def read_child_is_set_and_not_up (inode_write, w_args, inode_read, r_args, verify, expected):
-        execute ("sudo kill -9 `cat /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-0.pid /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-1.pid /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-3.pid`");
+        execute ("sudo kill -9 `cat /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-0.pid /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-1.pid /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-3.pid`");
         fop (inode_write, w_args)
         execute ("sudo gluster volume start vol force")
         time.sleep (20)
-        execute ("sudo kill -9 `cat /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-2.pid`")
+        execute ("sudo kill -9 `cat /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-2.pid`")
         verify (fop (inode_read, r_args), expected)
         execute ("sudo gluster volume start vol force")
         time.sleep (20)
 
 
 def  two_children_one_not_up (inode_write, w_args, inode_read, r_args, verify, expected):
-        execute ("sudo kill -9 `cat /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-0.pid  /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-2.pid`");
+        execute ("sudo kill -9 `cat /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-0.pid  /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-2.pid`");
         fop (inode_write, w_args)
         execute ("sudo gluster volume start vol force")
         time.sleep (20)
-        execute ("sudo kill -9 `cat /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-1.pid`")
+        execute ("sudo kill -9 `cat /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-1.pid`")
         verify (fop (inode_read, r_args), expected)
         execute ("sudo gluster volume start vol force")
         time.sleep (20)
@@ -136,7 +139,19 @@ def verify_val (result, expected):
         else:
                 execute_print ("verification successful")
 
+def verify_dirs (result, expected):
+        if set(result) != set(expected):
+                execute ('ls -l')
+                execute ('find /tmp/0 | xargs getfattr -d -m .')
+                execute ('find /tmp/1 | xargs getfattr -d -m .')
+                execute ('find /tmp/2 | xargs getfattr -d -m .')
+                execute ('find /tmp/3 | xargs getfattr -d -m .')
+                execute_print ("verification failed, expected: "+ str(expected)+ "result: "+ str(result))
+        else:
+                execute_print ("verification successful")
 
+
+execute_print ("test suit: read_child_is_set_and_up")
 init_test_bed ()
 disable_self_heal ()
 set_read_subvolume (3)
@@ -146,11 +161,12 @@ read_child_is_set_and_up (os.link, ["file", 0, "hlinkfile"], os.stat, ["hlinkfil
 read_child_is_set_and_up (xattr.setxattr, ["hlinkfile", 0, "trusted.abc", "def"], xattr.getxattr, ["hlinkfile", 0, "trusted.abc"], verify_val, "def")
 read_child_is_set_and_up (os.symlink, ["file", 0, "slinkfile"], os.readlink, ["slinkfile", 0], verify_val, "file")
 read_child_is_set_and_up (os.write, ["file", 1, "Write success\n"], os.read, ["file", 1, 555], verify_val, "Write success\n")
-read_child_is_set_and_up (os.mkdir, ["dir1", 0, 0640], os.listdir, ["/mnt/client", 0], verify_val, ['file', 'hlinkfile', 'slinkfile', 'dir1', 'file1'])
+read_child_is_set_and_up (os.mkdir, ["dir1", 0, 0640], os.listdir, ["/mnt/client", 0], verify_dirs, ['file', 'hlinkfile', 'slinkfile', 'dir1', 'file1'])
 read_child_is_set_and_up (os.chmod, ["file", 0, stat.S_IRWXG|stat.S_IRWXU|stat.S_IRWXO], os.stat, ["file", 0], verify_stat, [stat.S_ISREG, 2, 0, 0, 14])
 read_child_is_set_and_up (os.rename, ["file", 0, "file-renamed"], os.stat, ["file-renamed", 0], verify_stat, [stat.S_ISREG, 2, 0, 0, 14])
 reset_test_bed ()
 
+execute_print ("test suit: read_child_is_set_and_not_up")
 init_test_bed ()
 disable_self_heal ()
 set_read_subvolume (2)
@@ -160,11 +176,12 @@ read_child_is_set_and_not_up (os.link, ["file", 0, "hlinkfile"], os.stat, ["file
 read_child_is_set_and_not_up (xattr.setxattr, ["hlinkfile", 0, "trusted.abc", "def"], xattr.getxattr, ["hlinkfile", 0, "trusted.abc"], verify_val, "OS error(2): No such file or directory")
 read_child_is_set_and_not_up (os.symlink, ["file", 0, "slinkfile"], os.readlink, ["slinkfile", 0], verify_val, "OS error(2): No such file or directory")
 read_child_is_set_and_not_up (os.write, ["file", 1, "Write success\n"], os.read, ["file", 1, 555], verify_val, "OS error(2): No such file or directory")
-read_child_is_set_and_not_up (os.mkdir, ["dir1", 0, 0640], os.listdir, ["/mnt/client", 0], verify_val, [])
+read_child_is_set_and_not_up (os.mkdir, ["dir1", 0, 0640], os.listdir, ["/mnt/client", 0], verify_dirs, [])
 read_child_is_set_and_not_up (os.chmod, ["file", 0, stat.S_IRWXG|stat.S_IRWXU|stat.S_IRWXO], os.stat, ["file", 0], verify_val, "OS error(2): No such file or directory")
 read_child_is_set_and_not_up (os.rename, ["file", 0, "file-renamed"], os.stat, ["file-renamed", 0], verify_val, "OS error(2): No such file or directory")
 reset_test_bed ()
 
+execute_print ("test suit: two_children_one_not_up")
 init_test_bed ()
 disable_self_heal ()
 two_children_one_not_up (os.mknod, ["file", 0, 0600, stat.S_IFREG], os.stat, ["file", 0], verify_stat, [stat.S_ISREG, 1, 0, 0, 0])
@@ -173,7 +190,7 @@ two_children_one_not_up (os.link, ["file", 0, "hlinkfile"], os.stat, ["file", 0]
 two_children_one_not_up (xattr.setxattr, ["hlinkfile", 0, "trusted.abc", "def"], xattr.getxattr, ["hlinkfile", 0, "trusted.abc"], verify_val, "def")
 two_children_one_not_up (os.symlink, ["file", 0, "slinkfile"], os.readlink, ["slinkfile", 0], verify_val, "file")
 two_children_one_not_up (os.write, ["file", 1, "Write success\n"], os.read, ["file", 1, 555], verify_val, "Write success\n")
-two_children_one_not_up (os.mkdir, ["dir1", 0, 0640], os.listdir, ["/mnt/client", 0], verify_val, ['file', 'hlinkfile', 'slinkfile', 'dir1', 'file1'])
+two_children_one_not_up (os.mkdir, ["dir1", 0, 0640], os.listdir, ["/mnt/client", 0], verify_dirs, ['file', 'hlinkfile', 'slinkfile', 'dir1', 'file1'])
 two_children_one_not_up (os.chmod, ["file", 0, stat.S_IRWXG|stat.S_IRWXU|stat.S_IRWXO], os.stat, ["file", 0], verify_stat, [stat.S_ISREG, 2, 0, 0, 14])
 two_children_one_not_up (os.rename, ["file", 0, "file-renamed"], os.stat, ["file-renamed", 0], verify_stat, [stat.S_ISREG, 2, 0, 0, 14])
 reset_test_bed ()
@@ -188,7 +205,7 @@ reset_test_bed ()
 #failover (xattr.setxattr, ["hlinkfile", 0, "trusted.abc", "def"], xattr.getxattr, ["hlinkfile", 0, "trusted.abc"], verify_val, "def")
 #failover (os.symlink, ["file", 0, "slinkfile"], os.readlink, ["slinkfile", 0], verify_val, "file")
 #failover (os.write, ["file", 1, "Write success\n"], os.read, ["file", 1, 555], verify_val, "Write success\n")
-#failover (os.mkdir, ["dir1", 0, 0640], os.listdir, ["/mnt/client", 0], verify_val, [])
+#failover (os.mkdir, ["dir1", 0, 0640], os.listdir, ["/mnt/client", 0], verify_dirs, [])
 #failover (os.chmod, ["file", 0, stat.S_IRWXG|stat.S_IRWXU|stat.S_IRWXO], os.stat, ["file", 0], verify_stat, [stat.S_ISREG, 2, 0, 0, 14])
 #failover (os.rename, ["file", 0, "file-renamed"], os.stat, ["file-renamed", 0], verify_stat, [stat.S_ISREG, 2, 0, 0, 14])
 #reset_test_bed ()
@@ -203,13 +220,14 @@ reset_test_bed ()
 #failover (xattr.setxattr, ["hlinkfile", 0, "trusted.abc", "def"], xattr.getxattr, ["hlinkfile", 0, "trusted.abc"], verify_val, "OS error(5): Input/output error")
 #failover (os.symlink, ["file", 0, "slinkfile"], os.readlink, ["slinkfile", 0], verify_val, None)
 #failover (os.write, ["file", 1, "Write success\n"], os.read, ["file", 1, 555], verify_val, "OS error(5): Input/output error")
-#failover (os.mkdir, ["dir1", 0, 0640], os.listdir, ["/mnt/client", 0], verify_val, [])
+#failover (os.mkdir, ["dir1", 0, 0640], os.listdir, ["/mnt/client", 0], verify_dirs, [])
 #failover (os.chmod, ["file", 0, stat.S_IRWXG|stat.S_IRWXU|stat.S_IRWXO], os.stat, ["file", 0], verify_val, "OS error(5): Input/output error")
 #failover (os.rename, ["file", 0, "file-renamed"], os.stat, ["file-renamed", 0], verify_val, "OS error(5): Input/output error")
 #time.sleep (3)
 #reset_test_bed ()
 
 #Afr fd-write-fops set the read-child if the read-child fails for some reason
+execute_print ("test suit: Afr fd-write-fops set the read-child if the read-child fails for some reason")
 init_test_bed ()
 fd = 0
 try:
@@ -223,7 +241,7 @@ try:
         fd = os.open ("file1", os.O_RDWR|os.O_CREAT)
         os.close (fd)
 	fd = 0
-        if os.listdir("/mnt/client") != ['file', 'file1']:
+        if set(os.listdir("/mnt/client")) != set(['file', 'file1']):
                 execute_print("fd-write-fops verification failure")
 except OSError as (errno, strerror):
         execute_print ("OS error({0}): {1}".format(errno, strerror))

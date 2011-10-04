@@ -58,13 +58,14 @@ if [ $? -ne 0 ];then
 	$GLUSTERFSDIR/glusterd -LDEBUG
 fi
 
-$GLUSTERFSDIR/gluster volume create hosdu replica 2 $(hostname):/tmp/brick1/ $(hostname):/tmp/brick2/ $(hostname):/tmp/brick3/ $(hostname):/tmp/brick4/ 2>/dev/null 1>/dev/null;
+$GLUSTERFSDIR/gluster volume create hosdu $(hostname):/tmp/brick1/ $(hostname):/tmp/brick2/ $(hostname):/tmp/brick3/ $(hostname):/tmp/brick4/ 2>/dev/null 1>/dev/null;
 $GLUSTERFSDIR/gluster volume set hosdu diagnostics.client-log-level TRACE
 $GLUSTERFSDIR/gluster volume set hosdu diagnostics.brick-log-level TRACE
 $GLUSTERFSDIR/gluster volume start hosdu 2>/dev/null 1>/dev/null;
 
 mkdir /tmp/mnt/
 mount -t glusterfs $(hostname):hosdu /tmp/mnt/
+sleep 5
 cpwd=`pwd`
 cd /tmp/mnt/
 for i in {1..40}

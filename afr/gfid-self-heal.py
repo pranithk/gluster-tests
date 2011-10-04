@@ -3,7 +3,9 @@ import os
 import time
 import xattr
 import sys
+from socket import gethostname
 
+HOSTNAME = gethostname()
 dirgfid1='0sOY6EK8DrQ8abSTjfJYBFAw=='
 dirgfid2='0sdr37R7h+S5izpclI2uRsLQ=='
 filegfid1='0s/vNgfCTpT8q9UuOyhuSP2Q=='
@@ -23,13 +25,15 @@ def execute_print (cmd):
 def init_test_bed ():
         os.chdir ("/home/pranith")
         execute ("sudo umount /mnt/client")
-        execute ("sudo gluster volume create vol replica 2 `hostname`:/tmp/0 `hostname`:/tmp/1 ")
+        execute ("sudo gluster volume create vol replica 2 `hostname`:/tmp/0 `hostname`:/tmp/1 --mode=script")
         execute ("sudo gluster volume set vol performance.quick-read off")
+        execute ("sudo gluster volume set vol self-heal-daemon off")
         execute ("sudo gluster volume set vol performance.io-cache off")
         execute ("sudo gluster volume set vol performance.write-behind off")
         execute ("sudo gluster volume set vol performance.stat-prefetch off")
         execute ("sudo gluster volume set vol performance.read-ahead off")
         execute ("sudo gluster volume set vol diagnostics.client-log-level DEBUG")
+        execute ("sudo gluster volume set vol diagnostics.brick-log-level DEBUG")
         disable_self_heal ()
         execute ("sudo gluster volume start vol")
         execute ("sleep 5")
@@ -451,13 +455,13 @@ init_test_bed()
 os.mkdir ("abc")
 os.chdir ("abc")
 os.system ("sudo touch pranith")
-execute ("sudo kill -9 `cat /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-0.pid")
+execute ("sudo kill -9 `cat /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-0.pid")
 execute ("sudo rm -rf /mnt/client/abc")
 execute ("sudo mkdir /mnt/client/abc")
 execute ("sudo touch /mnt/client/abc/pranith")
 execute ("sudo gluster volume start vol force")
 time.sleep (20)
-execute ("sudo kill -9 `cat /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-1.pid")
+execute ("sudo kill -9 `cat /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-1.pid")
 execute ("sudo rm -rf /mnt/client/abc")
 execute ("sudo mkdir /mnt/client/abc")
 execute ("sudo touch /mnt/client/abc/pranith")

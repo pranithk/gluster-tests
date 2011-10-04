@@ -1,4 +1,5 @@
 #!/bin/bash -x
+HOSTNAME=`hostname`
 function assert_success {
         if [ $1 = 0 ] ; then
                 echo "test passed"
@@ -19,8 +20,9 @@ function init_test_bed {
 cd ~
 sudo rm -rf /tmp/0 /tmp/1 /tmp/2 /tmp/3
 sudo umount /mnt/client
-sudo gluster volume create vol replica 4 `hostname`:/tmp/0 `hostname`:/tmp/1 `hostname`:/tmp/2 `hostname`:/tmp/3
+sudo gluster volume create vol replica 4 `hostname`:/tmp/0 `hostname`:/tmp/1 `hostname`:/tmp/2 `hostname`:/tmp/3 --mode=script
 assert_success $?
+sudo gluster volume set vol self-heal-daemon off
 sudo gluster volume start vol
 assert_success $?
 sleep 1
@@ -102,7 +104,7 @@ sudo mkdir -p abc/def
 assert_success $?
 set_read_subvolume 3
 disable_self_heal
-sudo kill -9 `cat /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-0.pid /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-1.pid`
+sudo kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid`
 sudo touch abc/def/ghi
 sudo gluster volume start vol force
 assert_success $?
@@ -116,7 +118,7 @@ init_test_bed 5
 set_read_subvolume 3
 disable_self_heal
 sudo dd if=/dev/urandom of=afr_success_5.txt bs=1M count=1
-sudo kill -9 `cat /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-0.pid /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-1.pid`
+sudo kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid`
 sudo dd if=/dev/urandom of=afr_success_5.txt bs=1M count=10
 assert_success $?
 sudo gluster volume start vol force
@@ -134,7 +136,7 @@ sudo touch afr_success_6.txt
 assert_success $?
 sudo ln -s afr_success_6.txt link_to_afr_success_6.txt
 ls -l
-sudo kill -9 `cat /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-0.pid /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-1.pid`
+sudo kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid`
 sudo dd if=/dev/urandom of=link_to_afr_success_6.txt bs=1M count=10
 assert_success $?
 ls -l
@@ -158,7 +160,7 @@ sudo dd if=/dev/urandom of=abc/def/file_abc_def_2.txt bs=1M count=3
 sudo dd if=/dev/urandom of=abc/ghi/file_abc_ghi.txt bs=1M count=4
 assert_success $?
 
-sudo kill -9 `cat /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-0.pid /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-2.pid`
+sudo kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
 sudo rm -rf abc/ghi
 sudo truncate -s 0 abc/def/file_abc_def_1.txt
 sudo chown  pranith:pranith abc/def/file_abc_def_2.txt
@@ -190,7 +192,7 @@ reset_test_bed
 echo "9.a) Self-heal: Success + File type differs"
 init_test_bed 9a
 sudo touch file
-sudo kill -9 `cat /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-0.pid /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-2.pid`
+sudo kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
 sudo rm -f file
 sudo mkdir file
 sudo gluster volume start vol force
@@ -203,7 +205,7 @@ echo "9.b) Self-heal: Success + permissions differ"
 init_test_bed 9b
 sudo touch file
 sudo chmod 666 file
-sudo kill -9 `cat /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-0.pid /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-2.pid`
+sudo kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
 sudo chmod 777 file
 sudo gluster volume start vol force
 sleep 20
@@ -214,7 +216,7 @@ reset_test_bed
 echo "9.c) Self-heal: Success + ownership differs"
 init_test_bed 9c
 sudo touch file
-sudo kill -9 `cat /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-0.pid /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-2.pid`
+sudo kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
 sudo chown pranith:pranith file
 sudo gluster volume start vol force
 sleep 20
@@ -227,7 +229,7 @@ echo "increase file size test"
 init_test_bed 9d
 sudo touch file
 sudo echo "write1" > file
-sudo kill -9 `cat /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-0.pid /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-2.pid`
+sudo kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
 sudo echo "write2" >> file
 sudo gluster volume start vol force
 sleep 20
@@ -235,7 +237,7 @@ sudo find /mnt/client
 ls -lR /mnt/client
 ls -lR /tmp/{0,1,2,3}/
 echo "decrease file size test"
-sudo kill -9 `cat /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-0.pid /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-2.pid`
+sudo kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
 sudo truncate -s 0 file
 sudo gluster volume start vol force
 sleep 20
@@ -246,7 +248,7 @@ reset_test_bed
 echo "9.e) Self-heal: Success + gfid differs"
 init_test_bed 9e
 sudo touch file
-sudo kill -9 `cat /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-0.pid /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-2.pid`
+sudo kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
 sudo rm -f file
 sudo touch file
 sudo gluster volume start vol force
@@ -260,7 +262,7 @@ echo "10.a) Self-heal: xattr data pending"
 init_test_bed 10a
 sudo touch file
 sudo echo "write1" > file
-sudo kill -9 `cat /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-0.pid /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-2.pid`
+sudo kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
 sudo echo "write2" > file
 sudo gluster volume start vol force
 sleep 20
@@ -272,7 +274,7 @@ echo "10.b) Self-heal: xattr metadata pending"
 init_test_bed 10b
 sudo touch file
 sudo chown pranith:pranith file
-sudo kill -9 `cat /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-0.pid /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-2.pid`
+sudo kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
 sudo chown root:root file
 sudo chown pranith:pranith file
 sudo gluster volume start vol force
@@ -285,7 +287,7 @@ reset_test_bed
 echo "10.c) Self-heal: xattr entry pending"
 init_test_bed 10c
 sudo mkdir -p abc/def
-sudo kill -9 `cat /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-0.pid /etc/glusterd/vols/vol/run/pranith-Inspiron-1440-tmp-2.pid`
+sudo kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
 sudo mkdir abc/ghi
 sudo mkdir abc/jkl
 sudo gluster volume start vol force
