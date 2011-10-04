@@ -43,6 +43,7 @@ def init_test_bed ():
         execute ("sudo umount /mnt/client")
         execute ("sudo gluster volume create vol replica 4 `hostname`:/tmp/0 `hostname`:/tmp/1 `hostname`:/tmp/2 `hostname`:/tmp/3 --mode=script")
         execute ("sudo gluster volume set vol self-heal-daemon off")
+        execute ("sudo gluster volume set vol client-log-level DEBUG")
         execute ("sudo gluster volume set vol performance.quick-read off")
         execute ("sudo gluster volume set vol performance.io-cache off")
         execute ("sudo gluster volume set vol performance.write-behind off")
