@@ -61,7 +61,7 @@ assert_success $?
 }
 
 function assert_are_equal {
-AREQUAL='/home/pranith/workspace/tools/areqal/arequal/arequal-checksum'
+AREQUAL='/home/pranithk/workspace/tools/areqal/arequal/arequal-checksum'
 sudo rm -rf /tmp/{0,1,2,3}/.landfill
 diff <($AREQUAL /tmp/0) <($AREQUAL /tmp/1)
 assert_success $?
@@ -140,14 +140,14 @@ sudo kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/v
 sudo dd if=/dev/urandom of=link_to_afr_success_6.txt bs=1M count=10
 assert_success $?
 ls -l
-sudo chown -h pranith:pranith link_to_afr_success_6.txt
+sudo chown -h pranithk:pranithk link_to_afr_success_6.txt
 ls -l
 sudo gluster volume start vol force
 assert_success $?
 sleep 20
-[ `ls -l link_to_afr_success_6.txt | awk '{ print $3}'` = pranith ]
+[ `ls -l link_to_afr_success_6.txt | awk '{ print $3}'` = pranithk ]
 assert_success $?
-[ `ls -l link_to_afr_success_6.txt | awk '{ print $4}'` = pranith ]
+[ `ls -l link_to_afr_success_6.txt | awk '{ print $4}'` = pranithk ]
 assert_success $?
 reset_test_bed
 
@@ -163,12 +163,12 @@ assert_success $?
 sudo kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
 sudo rm -rf abc/ghi
 sudo truncate -s 0 abc/def/file_abc_def_1.txt
-sudo chown  pranith:pranith abc/def/file_abc_def_2.txt
+sudo chown  pranithk:pranithk abc/def/file_abc_def_2.txt
 sudo mkdir -p def/ghi jkl/mno
 sudo dd if=/dev/urandom of=def/ghi/file1.txt bs=1M count=2
 sudo dd if=/dev/urandom of=def/ghi/file2.txt bs=1M count=3
 sudo dd if=/dev/urandom of=jkl/mno/file.txt bs=1M count=4
-sudo chown  pranith:pranith def/ghi/file2.txt
+sudo chown  pranithk:pranithk def/ghi/file2.txt
 sudo gluster volume start vol force
 assert_success $?
 sleep 20
@@ -217,7 +217,7 @@ echo "9.c) Self-heal: Success + ownership differs"
 init_test_bed 9c
 sudo touch file
 sudo kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
-sudo chown pranith:pranith file
+sudo chown pranithk:pranithk file
 sudo gluster volume start vol force
 sleep 20
 sudo find /mnt/client
@@ -273,10 +273,10 @@ reset_test_bed
 echo "10.b) Self-heal: xattr metadata pending"
 init_test_bed 10b
 sudo touch file
-sudo chown pranith:pranith file
+sudo chown pranithk:pranithk file
 sudo kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
 sudo chown root:root file
-sudo chown pranith:pranith file
+sudo chown pranithk:pranithk file
 sudo gluster volume start vol force
 sleep 20
 sudo find /mnt/client
@@ -300,7 +300,7 @@ reset_test_bed
 echo "11a) mark source with the lowest uuid"
 init_test_bed 11
 sudo touch abc
-sudo chown pranith:pranith abc
+sudo chown pranithk:pranithk abc
 sudo chown root:root /tmp/1/abc
 ls -l abc
 ls -l /tmp/{0,1,2,3}/abc
@@ -309,7 +309,7 @@ reset_test_bed
 echo "11b) mark source with the lowest uuid on multiple nodes"
 init_test_bed 11
 sudo touch abc
-sudo chown pranith:pranith abc
+sudo chown pranithk:pranithk abc
 sudo chown root:root /tmp/1/abc
 sudo chown root:root /tmp/3/abc
 sudo find /mnt/client
