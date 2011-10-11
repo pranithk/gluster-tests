@@ -81,7 +81,7 @@ echo "2) Test for estale when the fs is stale"
 init_test_bed 2
 sudo touch file
 sudo setfattr -n trusted.gfid -v 0sBfz5vAdHTEK1GZ99qjqTIg== /tmp/0/file
-sudo find /mnt/client/file
+sudo find /mnt/client/file | xargs stat
 assert_failure $?
 reset_test_bed
 
@@ -172,7 +172,7 @@ sudo chown  pranithk:pranithk def/ghi/file2.txt
 sudo gluster volume start vol force
 assert_success $?
 sleep 20
-sudo find /mnt/client
+sudo find /mnt/client | xargs stat
 assert_are_equal
 reset_test_bed
 
@@ -197,7 +197,7 @@ sudo rm -f file
 sudo mkdir file
 sudo gluster volume start vol force
 sleep 20
-sudo find /mnt/client
+sudo find /mnt/client | xargs stat
 assert_are_equal
 reset_test_bed
 
@@ -209,7 +209,7 @@ sudo kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/v
 sudo chmod 777 file
 sudo gluster volume start vol force
 sleep 20
-sudo find /mnt/client
+sudo find /mnt/client | xargs stat
 assert_are_equal
 reset_test_bed
 
@@ -220,7 +220,7 @@ sudo kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/v
 sudo chown pranithk:pranithk file
 sudo gluster volume start vol force
 sleep 20
-sudo find /mnt/client
+sudo find /mnt/client | xargs stat
 assert_are_equal
 reset_test_bed
 
@@ -233,7 +233,7 @@ sudo kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/v
 sudo echo "write2" >> file
 sudo gluster volume start vol force
 sleep 20
-sudo find /mnt/client
+sudo find /mnt/client | xargs stat
 ls -lR /mnt/client
 ls -lR /tmp/{0,1,2,3}/
 echo "decrease file size test"
@@ -241,7 +241,7 @@ sudo kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/v
 sudo truncate -s 0 file
 sudo gluster volume start vol force
 sleep 20
-sudo find /mnt/client
+sudo find /mnt/client | xargs stat
 assert_are_equal
 reset_test_bed
 
@@ -253,7 +253,7 @@ sudo rm -f file
 sudo touch file
 sudo gluster volume start vol force
 sleep 20
-sudo find /mnt/client
+sudo find /mnt/client | xargs stat
 getfattr -d -m "trusted" -e hex /tmp/{0,1,2,3}/file
 assert_are_equal
 reset_test_bed
@@ -266,7 +266,7 @@ sudo kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/v
 sudo echo "write2" > file
 sudo gluster volume start vol force
 sleep 20
-sudo find /mnt/client
+sudo find /mnt/client | xargs stat
 assert_are_equal
 reset_test_bed
 
@@ -279,7 +279,7 @@ sudo chown root:root file
 sudo chown pranithk:pranithk file
 sudo gluster volume start vol force
 sleep 20
-sudo find /mnt/client
+sudo find /mnt/client | xargs stat
 getfattr -d -m "trusted" -e hex /tmp/{0,1,2,3}/file
 assert_are_equal
 reset_test_bed
@@ -292,7 +292,7 @@ sudo mkdir abc/ghi
 sudo mkdir abc/jkl
 sudo gluster volume start vol force
 sleep 20
-sudo find /mnt/client
+sudo find /mnt/client | xargs stat
 ls -l /tmp/{0,1,2,3}/abc
 assert_are_equal
 reset_test_bed
@@ -312,7 +312,7 @@ sudo touch abc
 sudo chown pranithk:pranithk abc
 sudo chown root:root /tmp/1/abc
 sudo chown root:root /tmp/3/abc
-sudo find /mnt/client
+sudo find /mnt/client | xargs stat
 ls -l /tmp/{0,1,2,3}/abc
 assert_are_equal
 reset_test_bed
