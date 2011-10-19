@@ -7,6 +7,7 @@ if [ $1="" ];then
 else
         dir=$1
 fi
+sleep 2
 
 GLUSTERFSDIR=`dirname $dir`
 
@@ -46,7 +47,7 @@ function assert_success {
 }
 
 function assert_are_equal {
-AREQUAL='/home/pranith/workspace/tools/areqal/arequal/arequal-checksum'
+AREQUAL='/home/pranithk/workspace/tools/areqal/arequal/arequal-checksum'
 sudo rm -rf /tmp/brick{1,5}/.landfill
 diff <($AREQUAL /tmp/brick1) <($AREQUAL /tmp/brick5)
 assert_success $?
@@ -65,10 +66,10 @@ $GLUSTERFSDIR/gluster volume start hosdu 2>/dev/null 1>/dev/null;
 
 mkdir /tmp/mnt/
 mount -t glusterfs $(hostname):hosdu /tmp/mnt/
-sleep 5
+sleep 10
 cpwd=`pwd`
 cd /tmp/mnt/
-for i in {1..40}
+for i in {1..3}
 do
 	for j in {1..10}
 	do

@@ -23,7 +23,7 @@ def execute_print (cmd):
         return
 
 def init_test_bed ():
-        os.chdir ("/home/pranith")
+        os.chdir ("/home/pranithk")
         execute ("sudo umount /mnt/client")
         execute ("sudo gluster volume create vol replica 2 `hostname`:/tmp/0 `hostname`:/tmp/1 --mode=script")
         execute ("sudo gluster volume set vol performance.quick-read off")
@@ -48,7 +48,7 @@ def init_test_bed ():
 
 
 def reset_test_bed ():
-        os.chdir ("/home/pranith")
+        os.chdir ("/home/pranithk")
         execute ("sudo umount /mnt/client")
         execute ("sudo gluster volume stop vol --mode=script")
         execute ("sudo gluster volume delete vol --mode=script")
