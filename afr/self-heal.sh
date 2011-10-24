@@ -1,5 +1,10 @@
 #!/bin/bash -x
+if [ -z $1]; then
+        echo "Usage: $0 <username>"
+        exit 1
+fi
 HOSTNAME=`hostname`
+USER=$1
 function assert_success {
         if [ $1 = 0 ] ; then
                 echo "test passed"
@@ -30,7 +35,7 @@ gluster volume set vol diagnostics.client-log-level DEBUG
 assert_success $?
 sleep 1
 #valgrind --leak-check=yes --log-file=/etc/glusterd/valgrind$1.log /usr/local/sbin/glusterfs --log-level=INFO --volfile-id=/vol --volfile-server=localhost /mnt/client --attribute-timeout=0 --entry-timeout=0
-/usr/local/sbin/glusterfs --volfile-id=/vol --volfile-server=localhost /mnt/client --attribute-timeout=0 --entry-timeout=0
+/usr/local/sbin/glusterfs --volfile-id=/vol --volfile-server=`hostname` /mnt/client --attribute-timeout=0 --entry-timeout=0
 assert_success $?
 sleep 1
 cd /mnt/client
@@ -61,7 +66,7 @@ assert_success $?
 }
 
 function assert_are_equal {
-AREQUAL='/home/pranithk/workspace/tools/areqal/arequal/arequal-checksum'
+AREQUAL='/home/$USER/workspace/tools/areqal/arequal/arequal-checksum'
 rm -rf /tmp/{0,1,2,3}/.landfill
 diff <($AREQUAL /tmp/0) <($AREQUAL /tmp/1)
 assert_success $?
@@ -140,14 +145,14 @@ kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/v
 dd if=/dev/urandom of=link_to_afr_success_6.txt bs=1M count=10
 assert_success $?
 ls -l
-chown -h pranithk:pranithk link_to_afr_success_6.txt
+chown -h $USER:$USER link_to_afr_success_6.txt
 ls -l
 gluster volume start vol force
 assert_success $?
 sleep 20
-[ `ls -l link_to_afr_success_6.txt | awk '{ print $3}'` = pranithk ]
+[ `ls -l link_to_afr_success_6.txt | awk '{ print $3}'` = $USER ]
 assert_success $?
-[ `ls -l link_to_afr_success_6.txt | awk '{ print $4}'` = pranithk ]
+[ `ls -l link_to_afr_success_6.txt | awk '{ print $4}'` = $USER ]
 assert_success $?
 reset_test_bed
 
@@ -163,12 +168,12 @@ assert_success $?
 kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
 rm -rf abc/ghi
 truncate -s 0 abc/def/file_abc_def_1.txt
-chown  pranithk:pranithk abc/def/file_abc_def_2.txt
+chown  $USER:$USER abc/def/file_abc_def_2.txt
 mkdir -p def/ghi jkl/mno
 dd if=/dev/urandom of=def/ghi/file1.txt bs=1M count=2
 dd if=/dev/urandom of=def/ghi/file2.txt bs=1M count=3
 dd if=/dev/urandom of=jkl/mno/file.txt bs=1M count=4
-chown  pranithk:pranithk def/ghi/file2.txt
+chown  $USER:$USER def/ghi/file2.txt
 gluster volume start vol force
 assert_success $?
 sleep 20
@@ -217,7 +222,7 @@ echo "9.c) Self-heal: Success + ownership differs"
 init_test_bed 9c
 touch file
 kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
-chown pranithk:pranithk file
+chown $USER:$USER file
 gluster volume start vol force
 sleep 20
 find /mnt/client | xargs stat
@@ -273,10 +278,10 @@ reset_test_bed
 echo "10.b) Self-heal: xattr metadata pending"
 init_test_bed 10b
 touch file
-chown pranithk:pranithk file
+chown $USER:$USER file
 kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
 chown root:root file
-chown pranithk:pranithk file
+chown $USER:$USER file
 gluster volume start vol force
 sleep 20
 find /mnt/client | xargs stat
@@ -300,7 +305,7 @@ reset_test_bed
 echo "11a) mark source with the lowest uuid"
 init_test_bed 11
 touch abc
-chown pranithk:pranithk abc
+chown $USER:$USER abc
 chown root:root /tmp/1/abc
 ls -l abc
 ls -l /tmp/{0,1,2,3}/abc
@@ -309,7 +314,7 @@ reset_test_bed
 echo "11b) mark source with the lowest uuid on multiple nodes"
 init_test_bed 11
 touch abc
-chown pranithk:pranithk abc
+chown $USER:$USER abc
 chown root:root /tmp/1/abc
 chown root:root /tmp/3/abc
 find /mnt/client | xargs stat

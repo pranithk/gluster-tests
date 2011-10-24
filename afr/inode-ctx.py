@@ -5,6 +5,12 @@ import xattr
 from socket import gethostname
 
 HOSTNAME = gethostname()
+if sys.argv[1] is None:
+        print "Usage: please provide username"
+        sys.exit(-1)
+
+USER = sys.argv[1]
+HOMEDIR = "/home/"+USER
 def execute (cmd):
         status = os.system ("echo \"" + cmd +"\" && " +cmd)
         return
@@ -38,7 +44,7 @@ def fop (fop, args):
 
 
 def init_test_bed ():
-        os.chdir ("/home/pranithk")
+        os.chdir (HOMEDIR)
         execute ("sudo rm -rf /tmp/0 /tmp/1 /tmp/2 /tmp/3")
         execute ("sudo umount /mnt/client")
         execute ("sudo gluster volume create vol replica 4 `hostname`:/tmp/0 `hostname`:/tmp/1 `hostname`:/tmp/2 `hostname`:/tmp/3 --mode=script")
@@ -60,7 +66,7 @@ def init_test_bed ():
 
 
 def reset_test_bed ():
-        os.chdir ("/home/pranithk")
+        os.chdir (HOMEDIR)
         execute ("sudo umount /mnt/client")
         execute ("sudo gluster volume stop vol --mode=script")
         execute ("sudo gluster volume delete vol --mode=script")

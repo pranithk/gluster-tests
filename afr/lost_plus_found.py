@@ -5,6 +5,13 @@ import binascii
 from socket import gethostname
 
 HOSTNAME = gethostname()
+HOSTNAME = gethostname()
+if sys.argv[1] is None:
+        print "Usage: please provide username"
+        sys.exit(-1)
+
+USER = sys.argv[1]
+HOMEDIR = "/home/"+USER
 def execute (cmd):
         status = os.system ("echo \"" + cmd +"\" && " +cmd)
         return
@@ -14,7 +21,7 @@ def execute_print (cmd):
         return
 
 def init_test_bed ():
-        os.chdir ("/home/pranithk")
+        os.chdir (HOMEDIR)
         execute ("sudo rm -rf /home/gluster1 /home/gluster2")
         execute ("sudo umount /mnt/client")
         execute ("sudo gluster volume create vol replica 2 `hostname`:/home/gluster1 `hostname`:/home/gluster2 --mode=script")
@@ -37,7 +44,7 @@ def init_test_bed ():
 
 
 def reset_test_bed ():
-        os.chdir ("/home/pranithk")
+        os.chdir (HOMEDIR)
         execute ("sudo umount /mnt/client")
         execute ("sudo gluster volume stop vol --mode=script")
         execute ("sudo gluster volume delete vol --mode=script")

@@ -6,6 +6,12 @@ import sys
 from socket import gethostname
 
 HOSTNAME = gethostname()
+if sys.argv[1] is None:
+        print "Usage: please provide username"
+        sys.exit(-1)
+
+USER = sys.argv[1]
+HOMEDIR = "/home/"+USER
 dirgfid1='0sOY6EK8DrQ8abSTjfJYBFAw=='
 dirgfid2='0sdr37R7h+S5izpclI2uRsLQ=='
 filegfid1='0s/vNgfCTpT8q9UuOyhuSP2Q=='
@@ -23,7 +29,7 @@ def execute_print (cmd):
         return
 
 def init_test_bed ():
-        os.chdir ("/home/pranithk")
+        os.chdir (HOMEDIR)
         execute ("sudo umount /mnt/client")
         execute ("sudo gluster volume create vol replica 2 `hostname`:/tmp/0 `hostname`:/tmp/1 --mode=script")
         execute ("sudo gluster volume set vol performance.quick-read off")
@@ -48,7 +54,7 @@ def init_test_bed ():
 
 
 def reset_test_bed ():
-        os.chdir ("/home/pranithk")
+        os.chdir (HOMEDIR)
         execute ("sudo umount /mnt/client")
         execute ("sudo gluster volume stop vol --mode=script")
         execute ("sudo gluster volume delete vol --mode=script")
