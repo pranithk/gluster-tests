@@ -2,6 +2,7 @@ import os
 import time
 import stat
 import xattr
+import sys
 from socket import gethostname
 
 HOSTNAME = gethostname()

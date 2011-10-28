@@ -49,6 +49,7 @@ cd ~
 umount /mnt/client
 gluster volume stop vol --mode=script
 gluster volume delete vol --mode=script
+rm -rf /tmp/0 /tmp/1 /tmp/2 /tmp/3
 }
 
 function set_read_subvolume {
@@ -66,7 +67,7 @@ assert_success $?
 }
 
 function assert_are_equal {
-AREQUAL='/home/$USER/workspace/tools/areqal/arequal/arequal-checksum'
+AREQUAL="/home/$USER/workspace/tools/areqal/arequal/arequal-checksum"
 rm -rf /tmp/{0,1,2,3}/.landfill
 diff <($AREQUAL /tmp/0) <($AREQUAL /tmp/1)
 assert_success $?

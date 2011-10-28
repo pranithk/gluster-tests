@@ -41,7 +41,7 @@ function assert_success {
                 echo "test passed"
         else
                 echo "test failed"
-                #cleanup
+                cleanup
                 exit 1
         fi
 }
@@ -111,10 +111,10 @@ done
 if [ $temp -eq 1 ];then
 	echo "replace-brick operation successfull. Commiting the replace-brick"
 	$GLUSTERFSDIR/gluster volume replace-brick hosdu $(hostname):/tmp/brick1/ $(hostname):/tmp/brick5/ commit;
-        #graceful_cleanup ;
+        graceful_cleanup ;
 elif [ $temp -eq 2 ];then
 	echo "Something went Bananas and glusterfsd probably crashed. Please look into it"
-	#cleanup ;
+	cleanup ;
 fi
 rm -f /tmp/tempfile
 
