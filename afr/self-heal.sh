@@ -350,3 +350,14 @@ getfattr -d -m "trusted" -e hex /tmp/{0,1,2,3}/abc
 assert_are_equal
 reset_test_bed
 
+echo "13) If files dont have gfid, readdir should show them , find should fail with EIO because gfid assigning while some children are down is not accepted"
+init_test_bed 13
+touch /tmp/0/{1..10}
+assert_success $?
+kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+sleep 2
+[ `ls | wc -l` = 10 ]
+assert_success $?
+find | xargs stat
+assert_failure $?
+reset_test_bed
