@@ -30,21 +30,21 @@ def execute_print (cmd):
 
 def init_test_bed ():
         os.chdir (HOMEDIR)
-        execute ("sudo umount /mnt/client")
-        execute ("sudo gluster volume create vol replica 2 `hostname`:/tmp/0 `hostname`:/tmp/1 --mode=script")
-        execute ("sudo gluster volume set vol performance.quick-read off")
-        execute ("sudo gluster volume set vol self-heal-daemon off")
-        execute ("sudo gluster volume set vol performance.io-cache off")
-        execute ("sudo gluster volume set vol performance.write-behind off")
-        execute ("sudo gluster volume set vol performance.stat-prefetch off")
-        execute ("sudo gluster volume set vol performance.read-ahead off")
-        execute ("sudo gluster volume set vol diagnostics.client-log-level DEBUG")
-        execute ("sudo gluster volume set vol diagnostics.brick-log-level DEBUG")
+        execute ("umount /mnt/client")
+        execute ("gluster volume create vol replica 2 `hostname`:/tmp/0 `hostname`:/tmp/1 --mode=script")
+        execute ("gluster volume set vol performance.quick-read off")
+        execute ("gluster volume set vol self-heal-daemon off")
+        execute ("gluster volume set vol performance.io-cache off")
+        execute ("gluster volume set vol performance.write-behind off")
+        execute ("gluster volume set vol performance.stat-prefetch off")
+        execute ("gluster volume set vol performance.read-ahead off")
+        execute ("gluster volume set vol diagnostics.client-log-level DEBUG")
+        execute ("gluster volume set vol diagnostics.brick-log-level DEBUG")
         disable_self_heal ()
-        execute ("sudo gluster volume start vol")
+        execute ("gluster volume start vol")
         execute ("sleep 5")
-#        execute ("sudo valgrind --leak-check=yes --log-file=/etc/glusterd/valgrind$1.log /usr/local/sbin/glusterfs --log-level=INFO --volfile-id=/vol --volfile-server=localhost /mnt/client --attribute-timeout=0 --entry-timeout=0")
-        execute ("sudo /usr/local/sbin/glusterfs --volfile-id=/vol --volfile-server=localhost /mnt/client --attribute-timeout=0 --entry-timeout=0")
+#        execute ("valgrind --leak-check=yes --log-file=/etc/glusterd/valgrind$1.log /usr/local/sbin/glusterfs --log-level=INFO --volfile-id=/vol --volfile-server=localhost /mnt/client --attribute-timeout=0 --entry-timeout=0")
+        execute ("/usr/local/sbin/glusterfs --volfile-id=/vol --volfile-server=localhost /mnt/client --attribute-timeout=0 --entry-timeout=0")
         #time.sleep (20)
         os.chdir ("/mnt/client")
         execute ("mount | grep client")
@@ -55,16 +55,16 @@ def init_test_bed ():
 
 def reset_test_bed ():
         os.chdir (HOMEDIR)
-        execute ("sudo umount /mnt/client")
-        execute ("sudo gluster volume stop vol --mode=script")
-        execute ("sudo gluster volume delete vol --mode=script")
+        execute ("umount /mnt/client")
+        execute ("gluster volume stop vol --mode=script")
+        execute ("gluster volume delete vol --mode=script")
         execute ("rm -rf /tmp/0 /tmp/1")
         return
 
 def disable_self_heal ():
-        execute ("sudo gluster volume set vol cluster.data-self-heal off")
-        execute ("sudo gluster volume set vol cluster.metadata-self-heal off")
-        execute ("sudo gluster volume set vol cluster.entry-self-heal off")
+        execute ("gluster volume set vol cluster.data-self-heal off")
+        execute ("gluster volume set vol cluster.metadata-self-heal off")
+        execute ("gluster volume set vol cluster.entry-self-heal off")
 
 
 def generate_missing_file_enumerations (enumerations):
@@ -203,12 +203,12 @@ def perform_conflict_xattr_action (replica_dirs, d, f, attribute):
         if attr=="source":
                 for i in xrange(0, num_replicas):
                         if int(rep_num) == i:
-                                execute("sudo setfattr -n trusted.afr."+volname+"-client-"+str(i)+" -v 0sAAAAAAAAAAAAAAAA "+replica_dirs[int(rep_num)]+obj)
+                                execute("setfattr -n trusted.afr."+volname+"-client-"+str(i)+" -v 0sAAAAAAAAAAAAAAAA "+replica_dirs[int(rep_num)]+obj)
                                 continue
                         if dir_file == "file":
-                                execute("sudo setfattr -n trusted.afr."+volname+"-client-"+str(i)+" -v 0sAAAAAQAAAAEAAAAA "+replica_dirs[int(rep_num)]+obj)
+                                execute("setfattr -n trusted.afr."+volname+"-client-"+str(i)+" -v 0sAAAAAQAAAAEAAAAA "+replica_dirs[int(rep_num)]+obj)
                         if dir_file == "dir":
-                                execute("sudo setfattr -n trusted.afr."+volname+"-client-"+str(i)+" -v 0sAAAAAAAAAAAAAAAL "+replica_dirs[int(rep_num)]+obj)
+                                execute("setfattr -n trusted.afr."+volname+"-client-"+str(i)+" -v 0sAAAAAAAAAAAAAAAL "+replica_dirs[int(rep_num)]+obj)
         gfid_val = ""
         if attr=="gfid1" and dir_file == "dir":
                 gfid_val = dirgfid1
@@ -219,7 +219,7 @@ def perform_conflict_xattr_action (replica_dirs, d, f, attribute):
         if attr=="gfid2" and dir_file == "file":
                 gfid_val = filegfid2
         if gfid_val != "":
-                execute("sudo setfattr -n trusted.gfid  -v "+gfid_val+" "+replica_dirs[int(rep_num)]+obj)
+                execute("setfattr -n trusted.gfid  -v "+gfid_val+" "+replica_dirs[int(rep_num)]+obj)
         return
 
 def perform_action (replica_dirs, d, f, attribute):
@@ -232,17 +232,17 @@ def perform_action (replica_dirs, d, f, attribute):
         if dir_file == "file":
                 obj=d+"/"+f
         if attr=="delete":
-                execute("sudo rm -f "+replica_dirs[int(rep_num)]+obj)
+                execute("rm -f "+replica_dirs[int(rep_num)]+obj)
                 return
         if attr=="source":
                 for i in xrange(0, num_replicas):
                         if int(rep_num) == i:
-                                execute("sudo setfattr -n trusted.afr."+volname+"-client-"+str(i)+" -v 0sAAAAAAAAAAAAAAAA "+replica_dirs[int(rep_num)]+obj)
+                                execute("setfattr -n trusted.afr."+volname+"-client-"+str(i)+" -v 0sAAAAAAAAAAAAAAAA "+replica_dirs[int(rep_num)]+obj)
                                 continue
                         if dir_file == "file":
-                                execute("sudo setfattr -n trusted.afr."+volname+"-client-"+str(i)+" -v 0sAAAAAQAAAAEAAAAA "+replica_dirs[int(rep_num)]+obj)
+                                execute("setfattr -n trusted.afr."+volname+"-client-"+str(i)+" -v 0sAAAAAQAAAAEAAAAA "+replica_dirs[int(rep_num)]+obj)
                         if dir_file == "dir":
-                                execute("sudo setfattr -n trusted.afr."+volname+"-client-"+str(i)+" -v 0sAAAAAAAAAAAAAAAL "+replica_dirs[int(rep_num)]+obj)
+                                execute("setfattr -n trusted.afr."+volname+"-client-"+str(i)+" -v 0sAAAAAAAAAAAAAAAL "+replica_dirs[int(rep_num)]+obj)
         gfid_val = ""
         if attr=="gfid1" and dir_file == "dir":
                 gfid_val = dirgfid1
@@ -253,12 +253,12 @@ def perform_action (replica_dirs, d, f, attribute):
         if attr=="gfid2" and dir_file == "file":
                 gfid_val = filegfid2
         if gfid_val != "":
-                execute("sudo setfattr -n trusted.gfid  -v "+gfid_val+" "+replica_dirs[int(rep_num)]+obj)
+                execute("setfattr -n trusted.gfid  -v "+gfid_val+" "+replica_dirs[int(rep_num)]+obj)
         return
 
 def create_dirs_and_perform_action (replica_dirs, d, f, enumeration):
-        execute("sudo mkdir /mnt/client/"+d)
-        execute("sudo touch /mnt/client/"+d+"/"+f)
+        execute("mkdir /mnt/client/"+d)
+        execute("touch /mnt/client/"+d+"/"+f)
         for attribute in enumeration[:]:
                 perform_action (replica_dirs, d, f, attribute)
         return
@@ -289,9 +289,9 @@ def verify_state (result, tmp0_gfid, tmp0_errno, tmp1_gfid, tmp1_errno):
 
 def xattr_conflict_create_dirs_and_perform_action (replica_dirs, d, f, enumeration, result):
         for r in replica_dirs[:]:
-                execute("sudo mkdir "+r)
-                execute("sudo mkdir "+r+d)
-                execute("sudo touch "+r+d+"/"+f)
+                execute("mkdir "+r)
+                execute("mkdir "+r+d)
+                execute("touch "+r+d+"/"+f)
         init_test_bed ()
         os.chdir (d)
         for attribute in enumeration[:]:
@@ -341,9 +341,9 @@ def xattr_conflict_create_dirs_and_perform_action (replica_dirs, d, f, enumerati
 
 def gfid_create_dirs_and_perform_action (replica_dirs, d, f, enumeration, result):
         for r in replica_dirs[:]:
-                execute("sudo mkdir "+r)
-                execute("sudo mkdir "+r+d)
-                execute("sudo touch "+r+d+"/"+f)
+                execute("mkdir "+r)
+                execute("mkdir "+r+d)
+                execute("touch "+r+d+"/"+f)
         for attribute in enumeration[:]:
                 perform_action (replica_dirs, d, f, attribute)
         init_test_bed ()
@@ -460,18 +460,18 @@ execute_print ("test which will give EIO on parent dir gfid mismatches");
 init_test_bed()
 os.mkdir ("abc")
 os.chdir ("abc")
-os.system ("sudo touch pranith")
-execute ("sudo kill -9 `cat /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-0.pid")
-execute ("sudo rm -rf /mnt/client/abc")
-execute ("sudo mkdir /mnt/client/abc")
-execute ("sudo touch /mnt/client/abc/pranith")
-execute ("sudo gluster volume start vol force")
+os.system ("touch pranith")
+execute ("kill -9 `cat /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-0.pid")
+execute ("rm -rf /mnt/client/abc")
+execute ("mkdir /mnt/client/abc")
+execute ("touch /mnt/client/abc/pranith")
+execute ("gluster volume start vol force")
 time.sleep (20)
-execute ("sudo kill -9 `cat /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-1.pid")
-execute ("sudo rm -rf /mnt/client/abc")
-execute ("sudo mkdir /mnt/client/abc")
-execute ("sudo touch /mnt/client/abc/pranith")
-execute ("sudo gluster volume start vol force")
+execute ("kill -9 `cat /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-1.pid")
+execute ("rm -rf /mnt/client/abc")
+execute ("mkdir /mnt/client/abc")
+execute ("touch /mnt/client/abc/pranith")
+execute ("gluster volume start vol force")
 time.sleep (20)
 execute ("getfattr -d -m . /tmp/0/"+"abc")
 execute ("getfattr -d -m . /tmp/1/"+"abc")

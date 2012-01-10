@@ -46,20 +46,20 @@ def fop (fop, args):
 
 def init_test_bed ():
         os.chdir (HOMEDIR)
-        execute ("sudo rm -rf /tmp/0 /tmp/1 /tmp/2 /tmp/3")
-        execute ("sudo umount /mnt/client")
-        execute ("sudo gluster volume create vol replica 4 `hostname`:/tmp/0 `hostname`:/tmp/1 `hostname`:/tmp/2 `hostname`:/tmp/3 --mode=script")
-        execute ("sudo gluster volume set vol self-heal-daemon off")
-        execute ("sudo gluster volume set vol client-log-level DEBUG")
-        execute ("sudo gluster volume set vol performance.quick-read off")
-        execute ("sudo gluster volume set vol performance.io-cache off")
-        execute ("sudo gluster volume set vol performance.write-behind off")
-        execute ("sudo gluster volume set vol performance.stat-prefetch off")
-        execute ("sudo gluster volume set vol performance.read-ahead off")
-        execute ("sudo gluster volume start vol")
+        execute ("rm -rf /tmp/0 /tmp/1 /tmp/2 /tmp/3")
+        execute ("umount /mnt/client")
+        execute ("gluster volume create vol replica 4 `hostname`:/tmp/0 `hostname`:/tmp/1 `hostname`:/tmp/2 `hostname`:/tmp/3 --mode=script")
+        execute ("gluster volume set vol self-heal-daemon off")
+        execute ("gluster volume set vol client-log-level DEBUG")
+        execute ("gluster volume set vol performance.quick-read off")
+        execute ("gluster volume set vol performance.io-cache off")
+        execute ("gluster volume set vol performance.write-behind off")
+        execute ("gluster volume set vol performance.stat-prefetch off")
+        execute ("gluster volume set vol performance.read-ahead off")
+        execute ("gluster volume start vol")
         execute ("sleep 5")
-#        execute ("sudo valgrind --leak-check=yes --log-file=/etc/glusterd/valgrind$1.log /usr/local/sbin/glusterfs --log-level=INFO --volfile-id=/vol --volfile-server=localhost /mnt/client --attribute-timeout=0 --entry-timeout=0")
-        execute ("sudo /usr/local/sbin/glusterfs --volfile-id=/vol --volfile-server=localhost /mnt/client --attribute-timeout=0 --entry-timeout=0")
+#        execute ("valgrind --leak-check=yes --log-file=/etc/glusterd/valgrind$1.log /usr/local/sbin/glusterfs --log-level=INFO --volfile-id=/vol --volfile-server=localhost /mnt/client --attribute-timeout=0 --entry-timeout=0")
+        execute ("/usr/local/sbin/glusterfs --volfile-id=/vol --volfile-server=localhost /mnt/client --attribute-timeout=0 --entry-timeout=0")
         os.chdir ("/mnt/client")
         execute ("mount | grep client")
         execute_print ("-----------")
@@ -68,48 +68,48 @@ def init_test_bed ():
 
 def reset_test_bed ():
         os.chdir (HOMEDIR)
-        execute ("sudo umount /mnt/client")
-        execute ("sudo gluster volume stop vol --mode=script")
-        execute ("sudo gluster volume delete vol --mode=script")
+        execute ("umount /mnt/client")
+        execute ("gluster volume stop vol --mode=script")
+        execute ("gluster volume delete vol --mode=script")
 
 
 def set_read_subvolume (volnum):
-        execute ("sudo gluster volume set vol cluster.read-subvolume vol-client-" + str(volnum))
+        execute ("gluster volume set vol cluster.read-subvolume vol-client-" + str(volnum))
 
 
 def disable_self_heal ():
-        execute ("sudo gluster volume set vol cluster.data-self-heal off")
-        execute ("sudo gluster volume set vol cluster.metadata-self-heal off")
-        execute ("sudo gluster volume set vol cluster.entry-self-heal off")
+        execute ("gluster volume set vol cluster.data-self-heal off")
+        execute ("gluster volume set vol cluster.metadata-self-heal off")
+        execute ("gluster volume set vol cluster.entry-self-heal off")
 
 
 def read_child_is_set_and_up (inode_write, w_args, inode_read, r_args, verify, expected):
-        execute ("sudo kill -9 `cat /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-0.pid /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-1.pid /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-2.pid`");
+        execute ("kill -9 `cat /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-0.pid /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-1.pid /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-2.pid`");
         fop (inode_write, w_args)
-        execute ("sudo gluster volume start vol force")
+        execute ("gluster volume start vol force")
         time.sleep (20)
         verify (fop (inode_read, r_args), expected)
 
 
 def read_child_is_set_and_not_up (inode_write, w_args, inode_read, r_args, verify, expected):
-        execute ("sudo kill -9 `cat /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-0.pid /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-1.pid /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-3.pid`");
+        execute ("kill -9 `cat /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-0.pid /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-1.pid /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-3.pid`");
         fop (inode_write, w_args)
-        execute ("sudo gluster volume start vol force")
+        execute ("gluster volume start vol force")
         time.sleep (20)
-        execute ("sudo kill -9 `cat /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-2.pid`")
+        execute ("kill -9 `cat /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-2.pid`")
         verify (fop (inode_read, r_args), expected)
-        execute ("sudo gluster volume start vol force")
+        execute ("gluster volume start vol force")
         time.sleep (20)
 
 
 def  two_children_one_not_up (inode_write, w_args, inode_read, r_args, verify, expected):
-        execute ("sudo kill -9 `cat /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-0.pid  /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-2.pid`");
+        execute ("kill -9 `cat /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-0.pid  /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-2.pid`");
         fop (inode_write, w_args)
-        execute ("sudo gluster volume start vol force")
+        execute ("gluster volume start vol force")
         time.sleep (20)
-        execute ("sudo kill -9 `cat /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-1.pid`")
+        execute ("kill -9 `cat /etc/glusterd/vols/vol/run/"+HOSTNAME+"-tmp-1.pid`")
         verify (fop (inode_read, r_args), expected)
-        execute ("sudo gluster volume start vol force")
+        execute ("gluster volume start vol force")
         time.sleep (20)
 
 
@@ -205,7 +205,7 @@ reset_test_bed ()
 
 #FAILOVER SUCCESS this is done by patching the inode-read-fop_cbk to fail the first reply.
 #init_test_bed ()
-#execute ("sudo gluster volume set vol cluster.inode-read-fop-fail once")
+#execute ("gluster volume set vol cluster.inode-read-fop-fail once")
 #time.sleep (5);
 #failover (os.mknod, ["file", 0, 0600, stat.S_IFREG], os.stat, ["file", 0], verify_stat, [stat.S_ISREG, 1, 0, 0, 0])
 #failover (os.mknod, ["file1", 0, 0700, stat.S_IFIFO], os.access, ["file1", 0, os.R_OK], verify_val, True)
@@ -220,7 +220,7 @@ reset_test_bed ()
 #
 ##FAILOVER FAILURE this is done by patching the inode-read-fop_cbk to fail all replies.
 #init_test_bed ()
-#execute ("sudo gluster volume set vol cluster.inode-read-fop-fail always")
+#execute ("gluster volume set vol cluster.inode-read-fop-fail always")
 #time.sleep (5);
 #failover (os.mknod, ["file", 0, 0600, stat.S_IFREG], os.stat, ["file", 0], verify_val, "OS error(5): Input/output error")
 #failover (os.mknod, ["file1", 0, 0700, stat.S_IFIFO], os.access, ["file1", 0, os.R_OK], verify_val, False)
