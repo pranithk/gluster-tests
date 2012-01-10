@@ -205,6 +205,7 @@ gluster volume start vol force
 sleep 20
 find /mnt/client | xargs stat
 assert_are_equal
+ls -l /mnt/client
 reset_test_bed
 
 echo "9.b) Self-heal: Success + permissions differ"
@@ -360,4 +361,256 @@ sleep 2
 assert_success $?
 find | xargs stat
 assert_failure $?
+reset_test_bed
+
+echo "14) If Directories have xattrs with split-brain, impunge should happen for individual files"
+init_test_bed 14
+assert_success $?
+kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+sleep 1
+mkdir a
+cd a
+touch b
+kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid`
+rm -f b
+touch c
+cd /mnt/client
+gluster volume start vol force
+sleep 20
+kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+cd /mnt/client/a
+touch d
+gluster volume start vol force
+sleep 20
+ls -l /mnt/client/a
+assert_are_equal
+reset_test_bed
+
+#echo "15) If Directories have xattrs with split-brain, then impunge should happen for dir"
+#init_test_bed 15
+#assert_success $?
+#kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+#sleep 1
+#mkdir a
+#cd a
+#kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid`
+#touch b
+#gluster volume start vol force
+#sleep 20
+#kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+#touch c
+#cd ../
+#gluster volume start vol force
+#sleep 20
+#ls a
+#ls -lR /tmp/{0,1,2,3}
+#assert_are_equal
+#reset_test_bed
+
+echo "16) If Directories have xattrs with split-brain and mismatching files then impunge should not happen"
+init_test_bed 16
+assert_success $?
+kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+sleep 1
+mkdir a
+cd a
+kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid`
+touch b
+gluster volume start vol force
+sleep 22
+kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+touch b
+gluster volume start vol force
+sleep 20
+kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+touch b
+assert_failure $?
+reset_test_bed
+
+echo "17) Make all the replicas fools, it should only do impunge in entry self-heal"
+init_test_bed 17
+mkdir abc
+cd abc
+kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+touch a
+cd /mnt/client
+gluster volume start vol force
+sleep 20
+kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+cd /mnt/client/abc
+touch b
+cd /mnt/client
+gluster volume start vol force
+sleep 20
+kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+cd /mnt/client/abc
+touch c
+cd /mnt/client
+gluster volume start vol force
+sleep 20
+kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
+cd /mnt/client/abc
+touch d
+setfattr -n trusted.afr.vol-client-0 -v 0sAAAAAAAAAAAAAAAE /tmp/0/abc
+setfattr -n trusted.afr.vol-client-1 -v 0sAAAAAAAAAAAAAAAE /tmp/0/abc
+setfattr -n trusted.afr.vol-client-2 -v 0sAAAAAAAAAAAAAAAE /tmp/0/abc
+setfattr -n trusted.afr.vol-client-3 -v 0sAAAAAAAAAAAAAAAE /tmp/0/abc
+
+setfattr -n trusted.afr.vol-client-0 -v 0sAAAAAAAAAAAAAAAI /tmp/1/abc
+setfattr -n trusted.afr.vol-client-1 -v 0sAAAAAAAAAAAAAAAE /tmp/1/abc
+setfattr -n trusted.afr.vol-client-2 -v 0sAAAAAAAAAAAAAAAE /tmp/1/abc
+setfattr -n trusted.afr.vol-client-3 -v 0sAAAAAAAAAAAAAAAI /tmp/1/abc
+
+setfattr -n trusted.afr.vol-client-0 -v 0sAAAAAAAAAAAAAAAE /tmp/2/abc
+setfattr -n trusted.afr.vol-client-1 -v 0sAAAAAAAAAAAAAAAE /tmp/2/abc
+setfattr -n trusted.afr.vol-client-2 -v 0sAAAAAAAAAAAAAAAE /tmp/2/abc
+setfattr -n trusted.afr.vol-client-3 -v 0sAAAAAAAAAAAAAAAE /tmp/2/abc
+
+setfattr -n trusted.afr.vol-client-0 -v 0sAAAAAAAAAAAAAAAE /tmp/3/abc
+setfattr -n trusted.afr.vol-client-1 -v 0sAAAAAAAAAAAAAAAI /tmp/3/abc
+setfattr -n trusted.afr.vol-client-2 -v 0sAAAAAAAAAAAAAAAI /tmp/3/abc
+setfattr -n trusted.afr.vol-client-3 -v 0sAAAAAAAAAAAAAAAE /tmp/3/abc
+gluster volume start vol force
+sleep 20
+cd ../
+stat abc
+getfattr -d -m "trusted" -e hex /tmp/{0,1,2,3}/abc
+cd abc
+ls a
+ls b
+ls c
+ls d
+assert_are_equal
+reset_test_bed
+
+echo "18) Make all the replicas fools, it should only do impunge in missing entry self-heal"
+init_test_bed 18
+mkdir abc
+cd abc
+kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+touch a
+cd /mnt/client
+gluster volume start vol force
+sleep 20
+kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+cd /mnt/client/abc
+touch b
+cd /mnt/client
+gluster volume start vol force
+sleep 20
+kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+cd /mnt/client/abc
+touch c
+cd /mnt/client
+gluster volume start vol force
+sleep 20
+kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
+cd /mnt/client/abc
+touch d
+setfattr -n trusted.afr.vol-client-0 -v 0sAAAAAAAAAAAAAAAE /tmp/0/abc
+setfattr -n trusted.afr.vol-client-1 -v 0sAAAAAAAAAAAAAAAE /tmp/0/abc
+setfattr -n trusted.afr.vol-client-2 -v 0sAAAAAAAAAAAAAAAE /tmp/0/abc
+setfattr -n trusted.afr.vol-client-3 -v 0sAAAAAAAAAAAAAAAE /tmp/0/abc
+
+setfattr -n trusted.afr.vol-client-0 -v 0sAAAAAAAAAAAAAAAI /tmp/1/abc
+setfattr -n trusted.afr.vol-client-1 -v 0sAAAAAAAAAAAAAAAE /tmp/1/abc
+setfattr -n trusted.afr.vol-client-2 -v 0sAAAAAAAAAAAAAAAE /tmp/1/abc
+setfattr -n trusted.afr.vol-client-3 -v 0sAAAAAAAAAAAAAAAI /tmp/1/abc
+
+setfattr -n trusted.afr.vol-client-0 -v 0sAAAAAAAAAAAAAAAE /tmp/2/abc
+setfattr -n trusted.afr.vol-client-1 -v 0sAAAAAAAAAAAAAAAE /tmp/2/abc
+setfattr -n trusted.afr.vol-client-2 -v 0sAAAAAAAAAAAAAAAE /tmp/2/abc
+setfattr -n trusted.afr.vol-client-3 -v 0sAAAAAAAAAAAAAAAE /tmp/2/abc
+
+setfattr -n trusted.afr.vol-client-0 -v 0sAAAAAAAAAAAAAAAE /tmp/3/abc
+setfattr -n trusted.afr.vol-client-1 -v 0sAAAAAAAAAAAAAAAI /tmp/3/abc
+setfattr -n trusted.afr.vol-client-2 -v 0sAAAAAAAAAAAAAAAI /tmp/3/abc
+setfattr -n trusted.afr.vol-client-3 -v 0sAAAAAAAAAAAAAAAE /tmp/3/abc
+gluster volume start vol force
+sleep 20
+strace touch a
+getfattr -d -m "trusted" -e hex /tmp/{0,1,2,3}/abc
+ls -l /tmp/{0,1,2,3}/abc
+touch b
+getfattr -d -m "trusted" -e hex /tmp/{0,1,2,3}/abc
+ls -l /tmp/{0,1,2,3}/abc
+touch c
+getfattr -d -m "trusted" -e hex /tmp/{0,1,2,3}/abc
+ls -l /tmp/{0,1,2,3}/abc
+touch d
+getfattr -d -m "trusted" -e hex /tmp/{0,1,2,3}/abc
+ls -l /tmp/{0,1,2,3}/abc
+assert_are_equal
+reset_test_bed
+
+echo "19) Make all the replicas fools, impunge of missing entry self-heal should not happen if they are confliciting"
+init_test_bed 19
+mkdir abc
+cd abc
+kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+touch a
+gluster volume start vol force
+sleep 20
+kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+cd /mnt/client/abc
+touch a
+gluster volume start vol force
+echo "attach to gdb"
+sleep 60
+setfattr -n trusted.afr.vol-client-0 -v 0sAAAAAAAAAAAAAAAE /tmp/0/abc
+setfattr -n trusted.afr.vol-client-1 -v 0sAAAAAAAAAAAAAAAE /tmp/0/abc
+setfattr -n trusted.afr.vol-client-2 -v 0sAAAAAAAAAAAAAAAE /tmp/0/abc
+setfattr -n trusted.afr.vol-client-3 -v 0sAAAAAAAAAAAAAAAE /tmp/0/abc
+
+setfattr -n trusted.afr.vol-client-0 -v 0sAAAAAAAAAAAAAAAI /tmp/1/abc
+setfattr -n trusted.afr.vol-client-1 -v 0sAAAAAAAAAAAAAAAE /tmp/1/abc
+setfattr -n trusted.afr.vol-client-2 -v 0sAAAAAAAAAAAAAAAE /tmp/1/abc
+setfattr -n trusted.afr.vol-client-3 -v 0sAAAAAAAAAAAAAAAI /tmp/1/abc
+
+setfattr -n trusted.afr.vol-client-0 -v 0sAAAAAAAAAAAAAAAE /tmp/2/abc
+setfattr -n trusted.afr.vol-client-1 -v 0sAAAAAAAAAAAAAAAE /tmp/2/abc
+setfattr -n trusted.afr.vol-client-2 -v 0sAAAAAAAAAAAAAAAE /tmp/2/abc
+setfattr -n trusted.afr.vol-client-3 -v 0sAAAAAAAAAAAAAAAE /tmp/2/abc
+
+setfattr -n trusted.afr.vol-client-0 -v 0sAAAAAAAAAAAAAAAE /tmp/3/abc
+setfattr -n trusted.afr.vol-client-1 -v 0sAAAAAAAAAAAAAAAI /tmp/3/abc
+setfattr -n trusted.afr.vol-client-2 -v 0sAAAAAAAAAAAAAAAI /tmp/3/abc
+setfattr -n trusted.afr.vol-client-3 -v 0sAAAAAAAAAAAAAAAE /tmp/3/abc
+gluster volume start vol force
+sleep 20
+echo 3 > /proc/sys/vm/drop_caches
+strace touch a
+assert_failure $?
+getfattr -d -m trusted.gfid -ehex /tmp/{0,1,2,3}/abc/a
+reset_test_bed
+
+echo "20) If Directories don't have pending xattr file should not be deleted"
+init_test_bed 20
+assert_success $?
+kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+sleep 1
+mkdir abc
+cd abc
+touch b
+rm -f /tmp/1/abc/b
+setfattr -x trusted.afr.vol-client-0 /tmp/0/abc
+setfattr -x trusted.afr.vol-client-1 /tmp/0/abc
+setfattr -x trusted.afr.vol-client-2 /tmp/0/abc
+setfattr -x trusted.afr.vol-client-3 /tmp/0/abc
+
+setfattr -n trusted.afr.vol-client-0 -v 0sAAAAAAAAAAAAAAAA /tmp/1/abc
+setfattr -n trusted.afr.vol-client-1 -v 0sAAAAAAAAAAAAAAAA /tmp/1/abc
+setfattr -n trusted.afr.vol-client-2 -v 0sAAAAAAAAAAAAAAAA /tmp/1/abc
+setfattr -n trusted.afr.vol-client-3 -v 0sAAAAAAAAAAAAAAAA /tmp/1/abc
+echo 3 > /proc/sys/vm/drop_caches
+ls -l /tmp/{0,1,2,3}/abc
+ls b
+sleep 1
+ls -l /tmp/{0,1,2,3}/abc
+AREQUAL="/home/$USER/workspace/tools/areqal/arequal/arequal-checksum"
+rm -rf /tmp/{0,1,2,3}/.landfill
+diff <($AREQUAL /tmp/0) <($AREQUAL /tmp/1)
+assert_success $?
+ls | grep b
+assert_success $?
 reset_test_bed
