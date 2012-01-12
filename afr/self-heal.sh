@@ -365,24 +365,36 @@ reset_test_bed
 
 echo "14) If Directories have xattrs with split-brain, impunge should happen for individual files"
 init_test_bed 14
-assert_success $?
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
-sleep 1
-mkdir a
-cd a
-touch b
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid`
-rm -f b
-touch c
-cd /mnt/client
+mkdir abc
+cd abc
+kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+touch a
 gluster volume start vol force
 sleep 20
 kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
-cd /mnt/client/a
+touch b
+gluster volume start vol force
+sleep 20
+kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+touch c
+gluster volume start vol force
+sleep 20
+kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
 touch d
 gluster volume start vol force
 sleep 20
-ls -l /mnt/client/a
+strace touch a
+getfattr -d -m "trusted" -e hex /tmp/{0,1,2,3}/abc
+ls -l /tmp/{0,1,2,3}/abc
+touch b
+getfattr -d -m "trusted" -e hex /tmp/{0,1,2,3}/abc
+ls -l /tmp/{0,1,2,3}/abc
+touch c
+getfattr -d -m "trusted" -e hex /tmp/{0,1,2,3}/abc
+ls -l /tmp/{0,1,2,3}/abc
+touch d
+getfattr -d -m "trusted" -e hex /tmp/{0,1,2,3}/abc
+ls -l /tmp/{0,1,2,3}/abc
 assert_are_equal
 reset_test_bed
 
@@ -555,8 +567,7 @@ kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/v
 cd /mnt/client/abc
 touch a
 gluster volume start vol force
-echo "attach to gdb"
-sleep 60
+sleep 20
 setfattr -n trusted.afr.vol-client-0 -v 0sAAAAAAAAAAAAAAAE /tmp/0/abc
 setfattr -n trusted.afr.vol-client-1 -v 0sAAAAAAAAAAAAAAAE /tmp/0/abc
 setfattr -n trusted.afr.vol-client-2 -v 0sAAAAAAAAAAAAAAAE /tmp/0/abc
