@@ -625,3 +625,26 @@ assert_success $?
 ls | grep b
 assert_success $?
 reset_test_bed
+
+echo "21) Forced merge of directory test"
+rm -rf /tmp/0 /tmp/1 /tmp/3 /tmp/2
+mkdir /tmp/0 /tmp/1 /tmp/3 /tmp/2
+touch /tmp/0/a
+setfattr -n trusted.gfid -v 0s+wqm/34LQnm8Ec8tCmoHEg== /tmp/0/a
+touch /tmp/1/b
+setfattr -n trusted.gfid -v 0sQTi1LjUkQwOhek4Oqx+daA== /tmp/1/b
+touch /tmp/2/c
+setfattr -n trusted.gfid -v 0sbNLOUJKQTUGs2GJvWJ8SDQ== /tmp/2/c
+touch /tmp/3/d
+setfattr -n trusted.gfid -v 0svtbQZq1vSLGB5uQaSo/7ng== /tmp/3/d
+gluster volume create vol replica 4 $HOSTNAME:/tmp/0 $HOSTNAME:/tmp/1 $HOSTNAME:/tmp/2 $HOSTNAME:/tmp/3 --mode=script
+gluster volume start vol
+gluster volume set vol client-log-level DEBUG
+gluster volume set vol brick-log-level DEBUG
+gluster volume set vol self-heal-daemon off
+mount -t glusterfs $HOSTNAME:/vol /mnt/client
+cd /mnt/client
+ls
+sleep 1
+assert_are_equal
+reset_test_bed
