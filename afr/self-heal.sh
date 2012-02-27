@@ -28,6 +28,7 @@ umount /mnt/client
 gluster volume create vol replica 4 `hostname`:/tmp/0 `hostname`:/tmp/1 `hostname`:/tmp/2 `hostname`:/tmp/3 --mode=script
 assert_success $?
 gluster volume set vol self-heal-daemon off
+gluster volume set vol stat-prefetch off
 gluster volume start vol
 assert_success $?
 sleep 1
@@ -69,6 +70,7 @@ assert_success $?
 function assert_are_equal {
 AREQUAL="/home/$USER/workspace/tools/areqal/arequal/arequal-checksum"
 rm -rf /tmp/{0,1,2,3}/.landfill
+rm -rf /tmp/{0,1,2,3}/.glusterfs
 diff <($AREQUAL /tmp/0) <($AREQUAL /tmp/1)
 assert_success $?
 diff <($AREQUAL /tmp/0) <($AREQUAL /tmp/2)
