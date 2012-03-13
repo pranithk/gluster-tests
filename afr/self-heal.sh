@@ -597,7 +597,7 @@ assert_failure $?
 getfattr -d -m trusted.gfid -ehex /tmp/{0,1,2,3}/abc/a
 reset_test_bed
 
-echo "20) If Directories don't have pending xattr file should not be deleted"
+echo "20) If Directories don't have pending xattrs, file should not be deleted"
 init_test_bed 20
 assert_success $?
 kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
@@ -648,5 +648,104 @@ mount -t glusterfs $HOSTNAME:/vol /mnt/client
 cd /mnt/client
 ls
 sleep 1
+assert_are_equal
+reset_test_bed
+
+function self_heal_no_change_log_sink_exists {
+gluster volume create vol replica 4 $HOSTNAME:/tmp/0 $HOSTNAME:/tmp/1 $HOSTNAME:/tmp/2 $HOSTNAME:/tmp/3 --mode=script
+gluster volume start vol
+gluster volume set vol client-log-level DEBUG
+gluster volume set vol brick-log-level DEBUG
+gluster volume set vol self-heal-daemon off
+mount -t glusterfs $HOSTNAME:/vol /mnt/client
+cd /mnt/client
+ls -l a
+[ `ls -l a | awk '{ print $5}'` = 1048576 ]
+assert_success $?
+assert_are_equal
+reset_test_bed
+}
+
+echo "22) If files w.o. any xattrs has size mismatch select the one with non-zero size as source"
+rm -rf /tmp/0 /tmp/1 /tmp/3 /tmp/2
+mkdir /tmp/0 /tmp/1 /tmp/3 /tmp/2
+touch /tmp/0/a /tmp/1/a /tmp/2/a /tmp/3/a
+dd if=/dev/zero of=/tmp/3/a bs=1M count=1
+self_heal_no_change_log_sink_exists
+
+echo "23) If files w.o. changelog has size mismatch select the one with non-zero size as source"
+rm -rf /tmp/0 /tmp/1 /tmp/3 /tmp/2
+mkdir /tmp/0 /tmp/1 /tmp/3 /tmp/2
+touch /tmp/0/a /tmp/1/a /tmp/2/a /tmp/3/a
+setfattr -n trusted.gfid -v 0s+wqm/34LQnm8Ec8tCmoHEg== /tmp/0/a /tmp/1/a /tmp/2/a /tmp/3/a
+dd if=/dev/zero of=/tmp/3/a bs=1M count=1
+self_heal_no_change_log_sink_exists
+
+function self_heal_no_change_log_source_doesnt_exist {
+gluster volume create vol replica 4 $HOSTNAME:/tmp/0 $HOSTNAME:/tmp/1 $HOSTNAME:/tmp/2 $HOSTNAME:/tmp/3 --mode=script
+gluster volume set vol cluster.background-self-heal-count 0
+gluster volume start vol
+gluster volume set vol client-log-level DEBUG
+gluster volume set vol brick-log-level DEBUG
+gluster volume set vol self-heal-daemon off
+mount -t glusterfs $HOSTNAME:/vol /mnt/client
+cd /mnt/client
+ls -l a
+assert_success $?
+truncate -s 0 a
+assert_failure $?
+}
+
+echo "24) If files w.o. changelog has size mismatch and more than one file has non-zero size then open should fail, lookup should succeed"
+rm -rf /tmp/0 /tmp/1 /tmp/3 /tmp/2
+mkdir /tmp/0 /tmp/1 /tmp/3 /tmp/2
+touch /tmp/0/a /tmp/1/a /tmp/2/a /tmp/3/a
+setfattr -n trusted.gfid -v 0s+wqm/34LQnm8Ec8tCmoHEg== /tmp/0/a /tmp/1/a /tmp/2/a /tmp/3/a
+dd if=/dev/zero of=/tmp/3/a bs=1M count=1
+dd if=/dev/zero of=/tmp/2/a bs=1M count=2
+self_heal_no_change_log_source_doesnt_exist
+rm -f /tmp/2/a
+find . | xargs stat
+assert_are_equal
+#reset_test_bed
+
+echo "25) If files w.o. xattrs has size mismatch and more than one file has non-zero size then open should fail, lookup should succeed"
+rm -rf /tmp/0 /tmp/1 /tmp/3 /tmp/2
+mkdir /tmp/0 /tmp/1 /tmp/3 /tmp/2
+touch /tmp/0/a /tmp/1/a /tmp/2/a /tmp/3/a
+dd if=/dev/zero of=/tmp/3/a bs=1M count=1
+dd if=/dev/zero of=/tmp/2/a bs=1M count=2
+self_heal_no_change_log_source_doesnt_exist
+rm -f /tmp/2/a
+find . | xargs stat
+assert_are_equal
+reset_test_bed
+
+echo "26) If files w.o. xattrs has metadata data self-heal, self-heal should not hang"
+rm -rf /tmp/0 /tmp/1 /tmp/3 /tmp/2
+mkdir /tmp/0 /tmp/1 /tmp/3 /tmp/2
+touch /tmp/0/a /tmp/1/a /tmp/2/a /tmp/3/a
+setfattr -n trusted.gfid -v 0s+wqm/34LQnm8Ec8tCmoHEg== /tmp/0/a /tmp/1/a
+dd if=/dev/zero of=/tmp/0/a bs=1M count=1
+dd if=/dev/zero of=/tmp/1/a bs=1M count=2
+chown $USER:$USER /tmp/1/a
+gluster volume create vol replica 4 $HOSTNAME:/tmp/0 $HOSTNAME:/tmp/1 $HOSTNAME:/tmp/2 $HOSTNAME:/tmp/3 --mode=script
+gluster volume start vol
+gluster volume set vol client-log-level DEBUG
+gluster volume set vol brick-log-level DEBUG
+gluster volume set vol self-heal-daemon off
+gluster volume set vol cluster.background-self-heal-count 0
+#un comment this for release >= 3.3
+#kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+mount -t glusterfs $HOSTNAME:/vol /mnt/client
+cd /mnt/client
+echo "attach to gdb"
+sleep 15
+ls -l a
+assert_success $?
+cat a
+assert_failure $?
+rm -f /tmp/0/a
+find . | xargs stat
 assert_are_equal
 reset_test_bed
