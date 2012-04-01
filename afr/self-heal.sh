@@ -622,6 +622,7 @@ sleep 1
 ls -l /tmp/{0,1,2,3}/abc
 AREQUAL="/home/$USER/workspace/tools/areqal/arequal/arequal-checksum"
 rm -rf /tmp/{0,1,2,3}/.landfill
+rm -rf /tmp/{0,1,2,3}/.glusterfs/indices/xattrop
 diff <($AREQUAL /tmp/0) <($AREQUAL /tmp/1)
 assert_success $?
 ls | grep b
