@@ -32,6 +32,7 @@ gluster volume set vol stat-prefetch off
 gluster volume start vol
 assert_success $?
 sleep 1
+gluster volume set vol cluster.background-self-heal-count 0
 gluster volume set vol diagnostics.client-log-level DEBUG
 assert_success $?
 sleep 1
@@ -748,5 +749,53 @@ cat a
 assert_failure $?
 rm -f /tmp/0/a
 find . | xargs stat
+
+echo "27) Full self-heal of file with holes"
+init_test_bed 27
+kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+truncate -s 1M 1
+gluster volume start vol force
+sleep 20
+find . | xargs stat
+[ `ls -ls /tmp/0/1 | awk '{print $1}'` = `ls -ls /tmp/1/1 | awk '{print $1}'` ]
+assert_success $?
+[ `ls -ls /tmp/0/1 | awk '{print $1}'` = `ls -ls /tmp/2/1 | awk '{print $1}'` ]
+assert_success $?
+[ `ls -ls /tmp/1/1 | awk '{print $1}'` = `ls -ls /tmp/3/1 | awk '{print $1}'` ]
+assert_success $?
+assert_are_equal
+reset_test_bed
+
+echo "28) Full self-heal of file with holes, file smaller than page size (128K)"
+init_test_bed 28
+dd if=/dev/urandom of=1 count=1 bs=1M
+kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+dd if=/dev/zero of=1 count=1 bs=1M
+truncate -s 64k 1
+gluster volume start vol force
+sleep 20
+find . | xargs stat
+[ `ls -ls /tmp/0/1 | awk '{print $1}'` = `ls -ls /tmp/2/1 | awk '{print $1}'` ]
+assert_success $?
+[ `ls -ls /tmp/1/1 | awk '{print $1}'` = `ls -ls /tmp/3/1 | awk '{print $1}'` ]
+assert_success $?
+assert_are_equal
+reset_test_bed
+
+echo "29) Diff self-heal of file with holes"
+init_test_bed 29
+dd if=/dev/urandom of=1 count=1 bs=1M
+kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+truncate -s 0 1
+truncate -s 1M 1
+gluster volume start vol force
+sleep 20
+find . | xargs stat
+[ `ls -ls /tmp/0/1 | awk '{print $1}'` = `ls -ls /tmp/1/1 | awk '{print $1}'` ]
+assert_success $?
+[ `ls -ls /tmp/0/1 | awk '{print $1}'` = `ls -ls /tmp/2/1 | awk '{print $1}'` ]
+assert_failure $?
+[ `ls -ls /tmp/1/1 | awk '{print $1}'` = `ls -ls /tmp/3/1 | awk '{print $1}'` ]
+assert_failure $?
 assert_are_equal
 reset_test_bed
