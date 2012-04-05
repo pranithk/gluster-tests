@@ -673,6 +673,7 @@ rm -rf /tmp/0 /tmp/1 /tmp/3 /tmp/2
 mkdir /tmp/0 /tmp/1 /tmp/3 /tmp/2
 touch /tmp/0/a /tmp/1/a /tmp/2/a /tmp/3/a
 dd if=/dev/zero of=/tmp/3/a bs=1M count=1
+setfattr -n trusted.gfid -v 0sOY6EK8DrQ8abSTjfJYBFAw== /tmp/{0,1,2,3}/a
 self_heal_no_change_log_sink_exists
 
 echo "23) If files w.o. changelog has size mismatch select the one with non-zero size as source"
@@ -709,7 +710,7 @@ self_heal_no_change_log_source_doesnt_exist
 rm -f /tmp/2/a
 find . | xargs stat
 assert_are_equal
-#reset_test_bed
+reset_test_bed
 
 echo "25) If files w.o. xattrs has size mismatch and more than one file has non-zero size then open should fail, lookup should succeed"
 rm -rf /tmp/0 /tmp/1 /tmp/3 /tmp/2
@@ -749,6 +750,7 @@ cat a
 assert_failure $?
 rm -f /tmp/0/a
 find . | xargs stat
+reset_test_bed
 
 echo "27) Full self-heal of file with holes"
 init_test_bed 27
