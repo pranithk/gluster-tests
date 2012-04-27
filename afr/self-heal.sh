@@ -801,3 +801,17 @@ assert_failure $?
 assert_failure $?
 assert_are_equal
 reset_test_bed
+
+echo "30) Delete the stale file test"
+init_test_bed 30
+mkdir a
+cd a
+touch file
+kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+rm -f file
+gluster volume start vol force
+sleep 20
+ls file
+assert_failure $?
+assert_are_equal
+reset_test_bed
