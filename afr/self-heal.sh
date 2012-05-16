@@ -673,7 +673,6 @@ rm -rf /tmp/0 /tmp/1 /tmp/3 /tmp/2
 mkdir /tmp/0 /tmp/1 /tmp/3 /tmp/2
 touch /tmp/0/a /tmp/1/a /tmp/2/a /tmp/3/a
 dd if=/dev/zero of=/tmp/3/a bs=1M count=1
-setfattr -n trusted.gfid -v 0sOY6EK8DrQ8abSTjfJYBFAw== /tmp/{0,1,2,3}/a
 self_heal_no_change_log_sink_exists
 
 echo "23) If files w.o. changelog has size mismatch select the one with non-zero size as source"
