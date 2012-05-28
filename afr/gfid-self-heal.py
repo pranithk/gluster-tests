@@ -91,13 +91,6 @@ def dir_xattrs_conflicting (a):
                 return 1
         return 0
 
-def dirs_conflicting (a):
-        if dir_gfids_conflicting (a):
-                return 1
-        if dir_xattrs_conflicting (a):
-                return 1
-        return 0
-
 def file_gfids_conflicting (a):
         if a['file0_gfid'] != 'none' and a['file1_gfid'] != 'none' and a['file0_gfid'] != a['file1_gfid']:
                 return 1
@@ -133,19 +126,10 @@ def no_conflict_resultant_file (a):
                         return ('EQUAL_XATTR', 'none')
         return ('BAD', 'BAD')
 
-def xattr_conflict_resultant_file (a):
-        if a['file0_gfid'] == 'none' and a['file1_gfid'] == 'none':
-                return ('CONFLICT_XATTR', 'none')
-        if a['file0_gfid'] != 'none':
-                return ('CONFLICT_XATTR', a['file0_gfid'])
-        if a['file1_gfid'] != 'none':
-                return ('CONFLICT_XATTR', a['file1_gfid'])
-        return ('BAD', 'BAD')
-
 def gfid_enumeration_result (enumeration):
         a = {'dir0_xattr':enumeration[0].split('-')[0], 'file0_xattr':enumeration[1].split('-')[0], 'dir0_gfid':enumeration[2].split('-')[0], 'file0_gfid':enumeration[3].split('-')[0], 'dir1_xattr':enumeration[4].split('-')[0], 'file1_xattr':enumeration[5].split('-')[0], 'dir1_gfid':enumeration[6].split('-')[0], 'file1_gfid':enumeration[7].split('-')[0]}
         execute_print (str(a));
-        if dirs_conflicting (a) == 1:
+        if dir_gfids_conflicting (a) == 1:
                 if file_gfids_conflicting (a) == 1:
                         return ('ERROR', (a['dir0_xattr'], a['file0_xattr'], a['dir0_gfid'], a['file0_gfid'], a['dir1_xattr'], a['file1_xattr'], a['dir1_gfid'], a['file1_gfid']))
                 elif file_xattrs_conflicting (a) == 1:
@@ -154,10 +138,10 @@ def gfid_enumeration_result (enumeration):
                         (f_xattr, f_gfid) = no_conflict_resultant_file(a)
                         return ('SUCCESS', (a['dir0_xattr'], f_xattr, a['dir0_gfid'], f_gfid, a['dir1_xattr'], f_xattr, a['dir1_gfid'], f_gfid))
         else:
-                if a['dir0_xattr'] == 'source':
+                if a['dir0_xattr'] == 'source' and a['dir1_xattr'] != 'source':
                         if file_gfids_conflicting (a) == 1:
                                 return ('SUCCESS', (a['dir0_xattr'], 'EQUAL_XATTR', a['dir0_gfid'], a['file0_gfid'], a['dir1_xattr'], 'EQUAL_XATTR', a['dir1_gfid'], a['file0_gfid']))
-                if a['dir1_xattr'] == 'source':
+                if a['dir1_xattr'] == 'source' and a['dir0_xattr'] != 'source':
                         if file_gfids_conflicting (a) == 1:
                                 return ('SUCCESS', (a['dir0_xattr'], 'EQUAL_XATTR', a['dir0_gfid'], a['file1_gfid'], a['dir1_xattr'], 'EQUAL_XATTR', a['dir1_gfid'], a['file1_gfid']))
                 if file_xattrs_conflicting (a) == 1:
@@ -263,29 +247,30 @@ def create_dirs_and_perform_action (replica_dirs, d, f, enumeration):
                 perform_action (replica_dirs, d, f, attribute)
         return
 
-def verify_gfid (gfid, none_val, gfid_state):
-        execute_print ("verifying gfid:"+" "+str(gfid_state)+" "+str(none_val)+" "+str(gfid))
-        if gfid_state == 'none':
-                gfid_state1 = none_val
+def verify_state (result, err_none_val, tmp0_gfid, tmp1_gfid):
+        if result[1][3] == result[1][7] == 'none':
+                return tmp0_gfid is not None and (tmp0_gfid == tmp1_gfid)
+        elif result[1][3] == 'none':
+                if result[1][7] == 'gfid1':
+                        gfid = filegfid1
+                else:
+                        gfid = filegfid2
+                return (tmp0_gfid == tmp1_gfid == gfid)
+        elif result[1][7] == 'none':
+                if result[1][3] == 'gfid1':
+                        gfid = filegfid1
+                else:
+                        gfid = filegfid2
+                return (tmp0_gfid == tmp1_gfid == gfid)
         else:
-                gfid_state1 = gfid_state
-        if gfid_state1 == 'gfid1':
-                return gfid == filegfid1
-        if gfid_state1 == 'gfid2':
-                return gfid == filegfid2
-        if gfid_state1 == 'none':
-                return gfid is None
-        if gfid_state1 == 'new-gfid':
-                return gfid is not None and gfid != filegfid1 and gfid != filegfid2
-        return False
-
-def verify_state (result, tmp0_gfid, tmp0_errno, tmp1_gfid, tmp1_errno):
-        if result[0]=='ERROR':
-                none = 'none'
-        else:
-                none = 'new-gfid'
-        return verify_gfid (tmp0_gfid, none, result[1][3]) and verify_gfid (tmp1_gfid, none, result[1][7])
-
+                for (gfidstate, filegfid) in ((result[1][3], tmp0_gfid), (result[1][7], tmp1_gfid)):
+                        if gfidstate == 'gfid1':
+                                gfid = filegfid1
+                        else:
+                                gfid = filegfid2
+                        if filegfid != gfid:
+                                return False
+        return True
 
 def xattr_conflict_create_dirs_and_perform_action (replica_dirs, d, f, enumeration, result):
         for r in replica_dirs[:]:
@@ -298,7 +283,8 @@ def xattr_conflict_create_dirs_and_perform_action (replica_dirs, d, f, enumerati
                 perform_conflict_xattr_action (replica_dirs, d, f, attribute)
         mount_errno = tmp0_errno = tmp1_errno = 0
         try:
-                os.stat('/mnt/client/'+d+'/'+f)
+                fd = os.open(f, os.O_RDWR)
+                os.close (fd)
         except OSError as (errno, strerror):
                 mount_errno = errno
         except IOError as (errno, strerror):
@@ -331,7 +317,7 @@ def xattr_conflict_create_dirs_and_perform_action (replica_dirs, d, f, enumerati
         elif result[0] == 'ERROR' and mount_errno == 0:
                         execute_print ("failed")
                         sys,exit(-1)
-        elif verify_state (result, tmp0_gfid, tmp0_errno,tmp1_gfid, tmp0_errno) == False:
+        elif verify_state (result, 'new-gfid', tmp0_gfid, tmp1_gfid) == False:
                         execute_print ("failed")
                         sys,exit(-1)
         else:
@@ -353,7 +339,8 @@ def gfid_create_dirs_and_perform_action (replica_dirs, d, f, enumeration, result
         #        execute ("getfattr -d -n trusted.gfid " +r+d)
         mount_errno = tmp0_errno = tmp1_errno = 0
         try:
-                os.stat('/mnt/client/'+d+'/'+f)
+                fd = os.open('/mnt/client/'+d+'/'+f, os.O_RDWR)
+                os.close (fd)
         except OSError as (errno, strerror):
                 mount_errno = errno
         except IOError as (errno, strerror):
@@ -387,7 +374,7 @@ def gfid_create_dirs_and_perform_action (replica_dirs, d, f, enumeration, result
         elif result[0] == 'ERROR' and mount_errno == 0:
                         execute_print ("failed")
                         sys,exit(-1)
-        elif verify_state (result, tmp0_gfid, tmp0_errno,tmp1_gfid, tmp0_errno) == False:
+        elif verify_state (result, 'new-gfid', tmp0_gfid, tmp1_gfid) == False:
                         execute_print ("failed")
                         sys,exit(-1)
         else:
