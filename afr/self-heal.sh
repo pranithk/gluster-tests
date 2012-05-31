@@ -5,6 +5,7 @@ if [ -z $1]; then
 fi
 HOSTNAME=`hostname`
 USER=$1
+WD="/var/lib/glusterd"
 function assert_success {
         if [ $1 = 0 ] ; then
                 echo "test passed"
@@ -36,7 +37,7 @@ gluster volume set vol cluster.background-self-heal-count 0
 gluster volume set vol diagnostics.client-log-level DEBUG
 assert_success $?
 sleep 1
-#valgrind --leak-check=yes --log-file=/etc/glusterd/valgrind$1.log /usr/local/sbin/glusterfs --log-level=INFO --volfile-id=/vol --volfile-server=localhost /mnt/client --attribute-timeout=0 --entry-timeout=0
+#valgrind --leak-check=yes --log-file=$WD/valgrind$1.log /usr/local/sbin/glusterfs --log-level=INFO --volfile-id=/vol --volfile-server=localhost /mnt/client --attribute-timeout=0 --entry-timeout=0
 /usr/local/sbin/glusterfs --volfile-id=/vol --volfile-server=`hostname` /mnt/client --attribute-timeout=0 --entry-timeout=0
 assert_success $?
 sleep 1
@@ -113,7 +114,7 @@ mkdir -p abc/def
 assert_success $?
 set_read_subvolume 3
 disable_self_heal
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-1.pid`
 touch abc/def/ghi
 gluster volume start vol force
 assert_success $?
@@ -127,7 +128,7 @@ init_test_bed 5
 set_read_subvolume 3
 disable_self_heal
 dd if=/dev/urandom of=afr_success_5.txt bs=1M count=1
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-1.pid`
 dd if=/dev/urandom of=afr_success_5.txt bs=1M count=10
 assert_success $?
 gluster volume start vol force
@@ -145,7 +146,7 @@ touch afr_success_6.txt
 assert_success $?
 ln -s afr_success_6.txt link_to_afr_success_6.txt
 ls -l
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-1.pid`
 dd if=/dev/urandom of=link_to_afr_success_6.txt bs=1M count=10
 assert_success $?
 ls -l
@@ -169,7 +170,7 @@ dd if=/dev/urandom of=abc/def/file_abc_def_2.txt bs=1M count=3
 dd if=/dev/urandom of=abc/ghi/file_abc_ghi.txt bs=1M count=4
 assert_success $?
 
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid`
 rm -rf abc/ghi
 truncate -s 0 abc/def/file_abc_def_1.txt
 chown  $USER:$USER abc/def/file_abc_def_2.txt
@@ -201,7 +202,7 @@ reset_test_bed
 echo "9.a) Self-heal: Success + File type differs"
 init_test_bed 9a
 touch file
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid`
 rm -f file
 mkdir file
 gluster volume start vol force
@@ -215,7 +216,7 @@ echo "9.b) Self-heal: Success + permissions differ"
 init_test_bed 9b
 touch file
 chmod 666 file
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid`
 chmod 777 file
 gluster volume start vol force
 sleep 20
@@ -226,7 +227,7 @@ reset_test_bed
 echo "9.c) Self-heal: Success + ownership differs"
 init_test_bed 9c
 touch file
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid`
 chown $USER:$USER file
 gluster volume start vol force
 sleep 20
@@ -239,7 +240,7 @@ echo "increase file size test"
 init_test_bed 9d
 touch file
 echo "write1" > file
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid`
 echo "write2" >> file
 gluster volume start vol force
 sleep 20
@@ -247,7 +248,7 @@ find /mnt/client | xargs stat
 ls -lR /mnt/client
 ls -lR /tmp/{0,1,2,3}/
 echo "decrease file size test"
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid`
 truncate -s 0 file
 gluster volume start vol force
 sleep 20
@@ -258,7 +259,7 @@ reset_test_bed
 echo "9.e) Self-heal: Success + gfid differs"
 init_test_bed 9e
 touch file
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid`
 rm -f file
 touch file
 gluster volume start vol force
@@ -272,7 +273,7 @@ echo "10.a) Self-heal: xattr data pending"
 init_test_bed 10a
 touch file
 echo "write1" > file
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid`
 echo "write2" > file
 gluster volume start vol force
 sleep 20
@@ -284,7 +285,7 @@ echo "10.b) Self-heal: xattr metadata pending"
 init_test_bed 10b
 touch file
 chown $USER:$USER file
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid`
 chown root:root file
 chown $USER:$USER file
 gluster volume start vol force
@@ -297,7 +298,7 @@ reset_test_bed
 echo "10.c) Self-heal: xattr entry pending"
 init_test_bed 10c
 mkdir -p abc/def
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid`
 mkdir abc/ghi
 mkdir abc/jkl
 gluster volume start vol force
@@ -358,7 +359,7 @@ echo "13) If files dont have gfid, readdir should show them , find should fail w
 init_test_bed 13
 touch /tmp/0/{1..10}
 assert_success $?
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 sleep 2
 [ `ls | wc -l` = 10 ]
 assert_success $?
@@ -370,19 +371,19 @@ echo "14) If Directories have xattrs with split-brain, impunge should happen for
 init_test_bed 14
 mkdir abc
 cd abc
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 touch a
 gluster volume start vol force
 sleep 20
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 touch b
 gluster volume start vol force
 sleep 20
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 touch c
 gluster volume start vol force
 sleep 20
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid`
 touch d
 gluster volume start vol force
 sleep 20
@@ -404,15 +405,15 @@ reset_test_bed
 #echo "15) If Directories have xattrs with split-brain, then impunge should happen for dir"
 #init_test_bed 15
 #assert_success $?
-#kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+#kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 #sleep 1
 #mkdir a
 #cd a
-#kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid`
+#kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-1.pid`
 #touch b
 #gluster volume start vol force
 #sleep 20
-#kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+#kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 #touch c
 #cd ../
 #gluster volume start vol force
@@ -425,19 +426,19 @@ reset_test_bed
 echo "16) If Directories have xattrs with split-brain and mismatching files then impunge should not happen"
 init_test_bed 16
 assert_success $?
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 sleep 1
 mkdir a
 cd a
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-1.pid`
 touch b
 gluster volume start vol force
 sleep 22
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 touch b
 gluster volume start vol force
 sleep 20
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 touch b
 assert_failure $?
 reset_test_bed
@@ -446,24 +447,24 @@ echo "17) Make all the replicas fools, it should only do impunge in entry self-h
 init_test_bed 17
 mkdir abc
 cd abc
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 touch a
 cd /mnt/client
 gluster volume start vol force
 sleep 20
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 cd /mnt/client/abc
 touch b
 cd /mnt/client
 gluster volume start vol force
 sleep 20
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 cd /mnt/client/abc
 touch c
 cd /mnt/client
 gluster volume start vol force
 sleep 20
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid`
 cd /mnt/client/abc
 touch d
 setfattr -n trusted.afr.vol-client-0 -v 0sAAAAAAAAAAAAAAAE /tmp/0/abc
@@ -502,24 +503,24 @@ echo "18) Make all the replicas fools, it should only do impunge in missing entr
 init_test_bed 18
 mkdir abc
 cd abc
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 touch a
 cd /mnt/client
 gluster volume start vol force
 sleep 20
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 cd /mnt/client/abc
 touch b
 cd /mnt/client
 gluster volume start vol force
 sleep 20
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 cd /mnt/client/abc
 touch c
 cd /mnt/client
 gluster volume start vol force
 sleep 20
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid`
 cd /mnt/client/abc
 touch d
 setfattr -n trusted.afr.vol-client-0 -v 0sAAAAAAAAAAAAAAAE /tmp/0/abc
@@ -562,11 +563,11 @@ echo "19) Make all the replicas fools, impunge of missing entry self-heal should
 init_test_bed 19
 mkdir abc
 cd abc
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-1.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 touch a
 gluster volume start vol force
 sleep 20
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-0.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 cd /mnt/client/abc
 touch a
 gluster volume start vol force
@@ -601,7 +602,7 @@ reset_test_bed
 echo "20) If Directories don't have pending xattrs, file should not be deleted"
 init_test_bed 20
 assert_success $?
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 sleep 1
 mkdir abc
 cd abc
@@ -738,7 +739,7 @@ gluster volume set vol brick-log-level DEBUG
 gluster volume set vol self-heal-daemon off
 gluster volume set vol cluster.background-self-heal-count 0
 #un comment this for release >= 3.3
-#kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+#kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 mount -t glusterfs $HOSTNAME:/vol /mnt/client
 cd /mnt/client
 echo "attach to gdb"
@@ -753,7 +754,7 @@ reset_test_bed
 
 echo "27) Full self-heal of file with holes"
 init_test_bed 27
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 truncate -s 1M 1
 gluster volume start vol force
 sleep 20
@@ -770,7 +771,7 @@ reset_test_bed
 echo "28) Full self-heal of file with holes, file smaller than page size (128K)"
 init_test_bed 28
 dd if=/dev/urandom of=1 count=1 bs=1M
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 dd if=/dev/zero of=1 count=1 bs=1M
 truncate -s 64k 1
 gluster volume start vol force
@@ -786,7 +787,7 @@ reset_test_bed
 echo "29) Diff self-heal of file with holes"
 init_test_bed 29
 dd if=/dev/urandom of=1 count=1 bs=1M
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 truncate -s 0 1
 truncate -s 1M 1
 gluster volume start vol force
@@ -806,7 +807,7 @@ init_test_bed 30
 mkdir a
 cd a
 touch file
-kill -9 `cat /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-2.pid /etc/glusterd/vols/vol/run/$HOSTNAME-tmp-3.pid`
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 rm -f file
 gluster volume start vol force
 sleep 20
