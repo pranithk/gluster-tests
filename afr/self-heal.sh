@@ -3,9 +3,11 @@ if [ -z $1]; then
         echo "Usage: $0 <username>"
         exit 1
 fi
+
 HOSTNAME=`hostname`
 USER=$1
 WD="/var/lib/glusterd"
+
 function assert_success {
         if [ $1 = 0 ] ; then
                 echo "test passed"
@@ -754,6 +756,7 @@ reset_test_bed
 
 echo "27) Full self-heal of file with holes"
 init_test_bed 27
+gluster volume set vol data-self-heal-algorithm full
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 truncate -s 1M 1
 gluster volume start vol force
@@ -770,6 +773,7 @@ reset_test_bed
 
 echo "28) Full self-heal of file with holes, file smaller than page size (128K)"
 init_test_bed 28
+gluster volume set vol data-self-heal-algorithm full
 dd if=/dev/urandom of=1 count=1 bs=1M
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 dd if=/dev/zero of=1 count=1 bs=1M
@@ -786,6 +790,7 @@ reset_test_bed
 
 echo "29) Diff self-heal of file with holes"
 init_test_bed 29
+gluster volume set vol data-self-heal-algorithm diff
 dd if=/dev/urandom of=1 count=1 bs=1M
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 truncate -s 0 1
@@ -802,8 +807,45 @@ assert_failure $?
 assert_are_equal
 reset_test_bed
 
-echo "30) Delete the stale file test"
+echo "30) Full self-heal of file with holes"
 init_test_bed 30
+gluster volume set vol data-self-heal-algorithm full
+dd if=/dev/urandom of=1 count=1 bs=1M
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
+truncate -s 2M 1
+gluster volume start vol force
+sleep 20
+find . | xargs stat
+[ `ls -ls /tmp/0/1 | awk '{print $1}'` = `ls -ls /tmp/1/1 | awk '{print $1}'` ]
+assert_success $?
+[ `ls -ls /tmp/0/1 | awk '{print $1}'` = `ls -ls /tmp/2/1 | awk '{print $1}'` ]
+assert_success $?
+[ `ls -ls /tmp/1/1 | awk '{print $1}'` = `ls -ls /tmp/3/1 | awk '{print $1}'` ]
+assert_success $?
+assert_are_equal
+reset_test_bed
+
+echo "31) Full self-heal of file with holes"
+init_test_bed 31
+gluster volume set vol data-self-heal-algorithm full
+dd if=/dev/urandom of=1 count=1 bs=2M
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
+truncate -s 0 1
+truncate -s 1M 1
+gluster volume start vol force
+sleep 20
+find . | xargs stat
+[ `ls -ls /tmp/0/1 | awk '{print $1}'` = `ls -ls /tmp/1/1 | awk '{print $1}'` ]
+assert_success $?
+[ `ls -ls /tmp/0/1 | awk '{print $1}'` != `ls -ls /tmp/2/1 | awk '{print $1}'` ]
+assert_success $?
+[ `ls -ls /tmp/1/1 | awk '{print $1}'` != `ls -ls /tmp/3/1 | awk '{print $1}'` ]
+assert_success $?
+assert_are_equal
+reset_test_bed
+
+echo "32) Delete the stale file test"
+init_test_bed 32
 mkdir a
 cd a
 touch file
