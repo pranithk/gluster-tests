@@ -857,3 +857,32 @@ ls file
 assert_failure $?
 assert_are_equal
 reset_test_bed
+
+echo "33) split-brain tests"
+init_test_bed 33
+touch a
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
+dd if=/dev/zero of=a bs=1M count=1
+gluster volume start vol force
+sleep 20
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
+dd if=/dev/zero of=a bs=1M count=1
+gluster volume start vol force
+sleep 20
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
+echo "please fail" > a
+assert_failure $?
+gluster volume set vol data-self-heal off
+sleep 1
+echo "please fail" > a
+assert_failure $?
+rm -rf /tmp/0/.glusterfs/* /tmp/0/a
+echo "please fail" > a
+assert_failure $?
+gluster volume set vol data-self-heal on
+sleep 1
+echo "pleasesucceed" > a
+assert_success $?
+[ `cat /tmp/0/a` = `cat /tmp/1/a` ]
+assert_success $?
+reset_test_bed
