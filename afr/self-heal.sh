@@ -28,7 +28,7 @@ function init_test_bed {
 cd ~
 rm -rf /tmp/0 /tmp/1 /tmp/2 /tmp/3
 umount /mnt/client
-gluster volume create vol replica 4 `hostname`:/tmp/0 `hostname`:/tmp/1 `hostname`:/tmp/2 `hostname`:/tmp/3 --mode=script
+gluster volume create vol replica 4 $HOSTNAME:/tmp/0 $HOSTNAME:/tmp/1 $HOSTNAME:/tmp/2 $HOSTNAME:/tmp/3 --mode=script
 assert_success $?
 gluster volume set vol self-heal-daemon off
 gluster volume set vol stat-prefetch off
@@ -40,7 +40,7 @@ gluster volume set vol diagnostics.client-log-level DEBUG
 assert_success $?
 sleep 1
 #valgrind --leak-check=yes --log-file=$WD/valgrind$1.log /usr/local/sbin/glusterfs --log-level=INFO --volfile-id=/vol --volfile-server=localhost /mnt/client --attribute-timeout=0 --entry-timeout=0
-/usr/local/sbin/glusterfs --volfile-id=/vol --volfile-server=`hostname` /mnt/client --attribute-timeout=0 --entry-timeout=0
+/usr/local/sbin/glusterfs --volfile-id=/vol --volfile-server=$HOSTNAME /mnt/client --attribute-timeout=0 --entry-timeout=0
 assert_success $?
 sleep 1
 cd /mnt/client
@@ -858,31 +858,125 @@ assert_failure $?
 assert_are_equal
 reset_test_bed
 
-echo "33) split-brain tests"
+echo "33) data self-heal on split-brain tests"
 init_test_bed 33
 touch a
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
-dd if=/dev/zero of=a bs=1M count=1
+echo "1" > a
 gluster volume start vol force
 sleep 20
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
-dd if=/dev/zero of=a bs=1M count=1
+echo "2" > a
 gluster volume start vol force
 sleep 20
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
-echo "please fail" > a
+cat a
 assert_failure $?
-gluster volume set vol data-self-heal off
-sleep 1
-echo "please fail" > a
+mkdir /mnt/client1
+mount -t glusterfs $HOSTNAME:/vol /mnt/client1
+cd /mnt/client1
+cat a
 assert_failure $?
 rm -rf /tmp/0/.glusterfs/* /tmp/0/a
-echo "please fail" > a
-assert_failure $?
-gluster volume set vol data-self-heal on
 sleep 1
-echo "pleasesucceed" > a
+cat a
 assert_success $?
 [ `cat /tmp/0/a` = `cat /tmp/1/a` ]
 assert_success $?
+cd /mnt/client
+[ `cat a` = "2" ]
+assert_success $?
+umount /mnt/client1
+reset_test_bed
+
+echo "34) data self-heal off split-brain tests"
+init_test_bed 34
+gluster volume set vol data-self-heal off
+touch a
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
+echo "1" > a
+gluster volume start vol force
+sleep 20
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
+echo "2" > a
+gluster volume start vol force
+sleep 20
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
+cat a
+assert_failure $?
+mkdir /mnt/client1
+mount -t glusterfs $HOSTNAME:/vol /mnt/client1
+cd /mnt/client1
+cat a
+assert_failure $?
+rm -rf /tmp/0/.glusterfs/* /tmp/0/a
+sleep 1
+cat a
+assert_failure $?
+cd /mnt/client
+cat a
+assert_failure $?
+umount /mnt/client1
+reset_test_bed
+
+echo "35) metadata self-heal on split-brain tests"
+init_test_bed 35
+touch a
+echo "metadata" > a
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
+chmod 444 a
+gluster volume start vol force
+sleep 20
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
+chmod 666 a
+gluster volume start vol force
+sleep 20
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
+cat a
+assert_failure $?
+mkdir /mnt/client1
+mount -t glusterfs $HOSTNAME:/vol /mnt/client1
+cd /mnt/client1
+cat a
+assert_failure $?
+rm -rf /tmp/0/.glusterfs/* /tmp/0/a
+sleep 1
+cat a
+assert_success $?
+[ `cat /tmp/0/a` = `cat /tmp/1/a` ]
+assert_success $?
+cd /mnt/client
+[ `cat a` = "metadata" ]
+assert_success $?
+umount /mnt/client1
+reset_test_bed
+
+echo "36) metadata self-heal off split-brain tests"
+init_test_bed 36
+gluster volume set vol metadata-self-heal off
+echo "metadata" > a
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
+chmod 444 a
+gluster volume start vol force
+sleep 20
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
+chmod 666 a
+gluster volume start vol force
+sleep 20
+kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
+cat a
+assert_failure $?
+mkdir /mnt/client1
+mount -t glusterfs $HOSTNAME:/vol /mnt/client1
+cd /mnt/client1
+cat a
+assert_failure $?
+rm -rf /tmp/0/.glusterfs/* /tmp/0/a
+sleep 1
+cat a
+assert_failure $?
+cd /mnt/client
+cat a
+assert_failure $?
+umount /mnt/client1
 reset_test_bed
