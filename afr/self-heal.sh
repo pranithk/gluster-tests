@@ -912,10 +912,12 @@ assert_failure $?
 rm -rf /tmp/0/.glusterfs/* /tmp/0/a
 sleep 1
 cat a
-assert_failure $?
+assert_success $?
+[ `cat /tmp/0/a | wc -c` = "0" ]
+assert_success $?
 cd /mnt/client
-cat a
-assert_failure $?
+[ `cat a` = "2" ]
+assert_success $?
 umount /mnt/client1
 reset_test_bed
 
@@ -924,11 +926,11 @@ init_test_bed 35
 touch a
 echo "metadata" > a
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
-chmod 444 a
+setfattr -n trusted.mdata -v abc a
 gluster volume start vol force
 sleep 20
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
-chmod 666 a
+setfattr -n trusted.mdata -v def a
 gluster volume start vol force
 sleep 20
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
@@ -945,6 +947,8 @@ cat a
 assert_success $?
 [ `cat /tmp/0/a` = `cat /tmp/1/a` ]
 assert_success $?
+[ `getfattr -n trusted.mdata --only-values /tmp/0/a` = `getfattr -n trusted.mdata --only-values /tmp/1/a` ]
+assert_success $?
 cd /mnt/client
 [ `cat a` = "metadata" ]
 assert_success $?
@@ -956,11 +960,11 @@ init_test_bed 36
 gluster volume set vol metadata-self-heal off
 echo "metadata" > a
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
-chmod 444 a
+setfattr -n trusted.mdata -v abc a
 gluster volume start vol force
 sleep 20
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
-chmod 666 a
+setfattr -n trusted.mdata -v def a
 gluster volume start vol force
 sleep 20
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
@@ -974,9 +978,9 @@ assert_failure $?
 rm -rf /tmp/0/.glusterfs/* /tmp/0/a
 sleep 1
 cat a
+assert_success $?
+getfattr -n trusted.abc /tmp/0/a
 assert_failure $?
-cd /mnt/client
-cat a
-assert_failure $?
+cd
 umount /mnt/client1
 reset_test_bed
