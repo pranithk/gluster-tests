@@ -31,6 +31,9 @@ assert_success $?
 gluster volume start vol
 assert_success $?
 sleep 1
+gluster volume set vol self-heal-daemon off
+gluster volume set vol stat-prefetch off
+gluster volume set vol cluster.background-self-heal-count 0
 gluster volume set vol diagnostics.client-log-level DEBUG
 assert_success $?
 sleep 1
@@ -59,17 +62,23 @@ mkfifo fifo;
 mknod block b 0 0;
 mknod char c 0 0;
 touch file
-ln -s file link;
+ln -s file link
+rm -f file
 # set
 cd /tmp/1
-setfattr -n trusted.afr.test-client-0 -v 0x000000000000000000000000 fifo block char link;
-setfattr -n trusted.afr.test-client-1 -v 0x000000010000000000000000 fifo block char link;
+setfattr -h -n trusted.afr.vol-client-0 -v 0x000000000000000000000000 fifo block char link
+setfattr -h -n trusted.afr.vol-client-1 -v 0x000000010000000000000000 fifo block char link
+cd -
 
 echo "Orig xattrs"
-getfattr -m . -d -e hex fifo block char link;
+cd /tmp/1
+getfattr -m . -d -e hex fifo block char link
+cd -
 sleep 1
-(find /mnt/client | xargs stat) >& /dev/null
+find . | xargs stat
 sleep 1
 echo "Xattrs after self-heal"
-getfattr -m . -d -e hex fifo block char link
+cd /tmp/1
+getfattr -h -m . -d -e hex fifo block char link
+cd -
 reset_test_bed
