@@ -6,7 +6,6 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <stdlib.h>
-#include <alloca.h>
 
 void
 print_menu (void)
@@ -49,6 +48,10 @@ main (int argc, char **argv)
                 goto out;
         }
         while (1) {
+                if (buf) {
+                        free (buf);
+                        buf = NULL;
+                }
                 print_menu ();
                 scanf ("%d", &option);
                 switch (option) {
@@ -57,7 +60,7 @@ main (int argc, char **argv)
                         break;
                 case 1:
                         len = scan_val ("len");
-                        buf = alloca (len+1);
+                        buf = calloc (len+1, 1);
                         buf[len] = 0;
                         ret = read (fd, buf, len);
                         if (ret < 0) {
@@ -68,7 +71,7 @@ main (int argc, char **argv)
                         break;
                 case 2:
                         len = scan_val ("len");
-                        buf = alloca (len + 1);
+                        buf = calloc (len + 1, 1);
                         buf[len] = 0;
                         memset (buf, '0', len);
                         ret = write (fd, buf, len);
