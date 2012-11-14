@@ -15,6 +15,8 @@ print_menu (void)
                      "1 - Read from fd\n"
                      "2 - Write to fd\n"
                      "3 - Seek on fd\n"
+                     "4 - Read ~1G file\n"
+                     "5 - Write ~1G file\n"
                      "----------------\n";
         printf (menu);
 }
@@ -39,6 +41,9 @@ main (int argc, char **argv)
         char    *buf = NULL;
         int     seekval = 0;
         int     seekin = 0;
+        int     iters = 1024/5;
+        int     i = 0;
+        char    ch = '\0';
 
         if (argc < 2)
                 goto out;
@@ -61,7 +66,6 @@ main (int argc, char **argv)
                 case 1:
                         len = scan_val ("len");
                         buf = calloc (len+1, 1);
-                        buf[len] = 0;
                         ret = read (fd, buf, len);
                         if (ret < 0) {
                                 printf ("Failed to read - %s", strerror (errno));
@@ -71,8 +75,7 @@ main (int argc, char **argv)
                         break;
                 case 2:
                         len = scan_val ("len");
-                        buf = calloc (len + 1, 1);
-                        buf[len] = 0;
+                        buf = calloc (len+1, 1);
                         memset (buf, '0', len);
                         ret = write (fd, buf, len);
                         if (ret < 0) {
@@ -95,6 +98,33 @@ main (int argc, char **argv)
                                 break;
                         }
                         lseek (fd, offset, seekval);
+                        break;
+                case 4:
+                        len = 5242880;
+                        buf = calloc (len, 1);
+                        lseek (fd, 0, SEEK_SET);
+                        for (i = 0; i < iters; i++) {
+                                ret = read (fd, buf, len);
+                                if (ret < 0) {
+                                        printf ("Failed to read - %s", strerror (errno));
+                                        continue;
+                                }
+                        }
+                        break;
+                case 5:
+                        len = 5242880;
+                        buf = calloc (len, 1);
+                        lseek (fd, 0, SEEK_SET);
+                        for (i = 0; i < iters; i++) {
+                                ch = ' ' + i%('~' - ' '); //some printable character
+                                memset (buf, ch, len);
+                                ret = write (fd, buf, len);
+                                if (ret < 0) {
+                                        printf ("Failed to write - %s", strerror (errno));
+                                        continue;
+                                }
+                        }
+                        break;
                 }
         }
 out:
