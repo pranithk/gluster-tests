@@ -1,30 +1,32 @@
-#!/bin/bash -x
+#!/bin/bash
 if [ -z $1]; then
         echo "Usage: $0 <username>"
         exit 1
 fi
 
+T=0
+DESC=""
 HOSTNAME=`hostname`
 USER=$1
 WD="/var/lib/glusterd"
+FAILURES[0]=""
 
 function assert_success {
-        if [ $1 = 0 ] ; then
-                echo "test passed"
-        else
-                echo "test failed"
+        if [ $1 != 0 ] ; then
+                FAILURES[$T]=$DESC
         fi
 }
 
 function assert_failure {
-        if [ $1 != 0 ] ; then
-                echo "test passed"
-        else
-                echo "test failed"
+        if [ $1 == 0 ] ; then
+                FAILURES[$T]=$DESC
         fi
 }
 
 function init_test_bed {
+T=$(($T+1))
+DESC=$1
+echo "$T)$DESC"
 cd ~
 rm -rf /tmp/0 /tmp/1 /tmp/2 /tmp/3
 umount /mnt/client
@@ -83,22 +85,30 @@ diff <($AREQUAL /tmp/0) <($AREQUAL /tmp/3)
 assert_success $?
 }
 
-echo "1) Test for failure when the entry does not exist"
-init_test_bed 1
+function print_failures {
+echo "-----------SUMMARY-----------"
+for i in `seq 1 $T`
+do
+        if [ -z "${FAILURES[$i]}" ]; then
+                continue;
+        fi
+        echo "$i - ${FAILURES[$i]}"
+done
+}
+
+init_test_bed "Test for failure when the entry does not exist"
 ls abcd
 assert_failure $?
 reset_test_bed
 
-echo "2) Test for estale when the fs is stale"
-init_test_bed 2
+init_test_bed "Test for estale when the fs is stale"
 touch file
 setfattr -n trusted.gfid -v 0sBfz5vAdHTEK1GZ99qjqTIg== /tmp/0/file
 find /mnt/client/file | xargs stat
 assert_failure $?
 reset_test_bed
 
-echo "3) Test should succeed for a good entry"
-init_test_bed 3
+init_test_bed "Test should succeed for a good entry"
 touch afr_success_3.txt
 assert_success $?
 dd if=/dev/urandom of=afr_success_3.txt bs=1M count=10
@@ -110,8 +120,7 @@ assert_success $?
 reset_test_bed
 
 
-echo "4) Test if the source is selected based on entry transaction for directory"
-init_test_bed 4
+init_test_bed "Test if the source is selected based on entry transaction for directory"
 mkdir -p abc/def
 assert_success $?
 set_read_subvolume 3
@@ -125,8 +134,7 @@ sleep 20
 assert_success $?
 reset_test_bed
 
-echo "5) Test if the source is selected based on data transaction for reg file"
-init_test_bed 5
+init_test_bed "Test if the source is selected based on data transaction for reg file"
 set_read_subvolume 3
 disable_self_heal
 dd if=/dev/urandom of=afr_success_5.txt bs=1M count=1
@@ -140,8 +148,7 @@ sleep 20
 assert_success $?
 reset_test_bed
 
-echo "6) Test if the source is selected based on metadata transaction for linkfile"
-init_test_bed 6
+init_test_bed "Test if the source is selected based on metadata transaction for linkfile"
 set_read_subvolume 3
 disable_self_heal
 touch afr_success_6.txt
@@ -163,8 +170,7 @@ assert_success $?
 assert_success $?
 reset_test_bed
 
-echo "7) Self-heal: Enoent + Success"
-init_test_bed 7
+init_test_bed "Self-heal: Enoent + Success"
 mkdir -p abc/def abc/ghi
 dd if=/dev/urandom of=abc/file_abc.txt bs=1M count=2
 dd if=/dev/urandom of=abc/def/file_abc_def_1.txt bs=1M count=2
@@ -188,8 +194,7 @@ find /mnt/client | xargs stat
 assert_are_equal
 reset_test_bed
 
-#echo "8) Self-heal: Success + reg-file Split brain"
-#init_test_bed 8
+#init_test_bed "Self-heal: Success + reg-file Split brain"
 #create file
 #bring one server down
 #edit the file
@@ -201,8 +206,7 @@ reset_test_bed
 #lookup
 #reset_test_bed
 
-echo "9.a) Self-heal: Success + File type differs"
-init_test_bed 9a
+init_test_bed "Self-heal: Success + File type differs"
 touch file
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid`
 rm -f file
@@ -214,8 +218,7 @@ assert_are_equal
 ls -l /mnt/client
 reset_test_bed
 
-echo "9.b) Self-heal: Success + permissions differ"
-init_test_bed 9b
+init_test_bed "Self-heal: Success + permissions differ"
 touch file
 chmod 666 file
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid`
@@ -226,8 +229,7 @@ find /mnt/client | xargs stat
 assert_are_equal
 reset_test_bed
 
-echo "9.c) Self-heal: Success + ownership differs"
-init_test_bed 9c
+init_test_bed "Self-heal: Success + ownership differs"
 touch file
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid`
 chown $USER:$USER file
@@ -238,8 +240,7 @@ assert_are_equal
 reset_test_bed
 
 echo "9.d) Self-heal: Success + size differs"
-echo "increase file size test"
-init_test_bed 9d
+init_test_bed "file size test"
 touch file
 echo "write1" > file
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid`
@@ -258,8 +259,7 @@ find /mnt/client | xargs stat
 assert_are_equal
 reset_test_bed
 
-echo "9.e) Self-heal: Success + gfid differs"
-init_test_bed 9e
+init_test_bed "Self-heal: Success + gfid differs"
 touch file
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid`
 rm -f file
@@ -271,8 +271,7 @@ getfattr -d -m "trusted" -e hex /tmp/{0,1,2,3}/file
 assert_are_equal
 reset_test_bed
 
-echo "10.a) Self-heal: xattr data pending"
-init_test_bed 10a
+init_test_bed "Self-heal: xattr data pending"
 touch file
 echo "write1" > file
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid`
@@ -283,8 +282,7 @@ find /mnt/client | xargs stat
 assert_are_equal
 reset_test_bed
 
-echo "10.b) Self-heal: xattr metadata pending"
-init_test_bed 10b
+init_test_bed "Self-heal: xattr metadata pending"
 touch file
 chown $USER:$USER file
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid`
@@ -297,8 +295,7 @@ getfattr -d -m "trusted" -e hex /tmp/{0,1,2,3}/file
 assert_are_equal
 reset_test_bed
 
-echo "10.c) Self-heal: xattr entry pending"
-init_test_bed 10c
+init_test_bed "Self-heal: xattr entry pending"
 mkdir -p abc/def
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid`
 mkdir abc/ghi
@@ -310,8 +307,7 @@ ls -l /tmp/{0,1,2,3}/abc
 assert_are_equal
 reset_test_bed
 
-echo "11a) mark source with the lowest uuid"
-init_test_bed 11
+init_test_bed "mark source with the lowest uuid"
 touch abc
 chown $USER:$USER abc
 chown root:root /tmp/1/abc
@@ -319,8 +315,7 @@ ls -l abc
 ls -l /tmp/{0,1,2,3}/abc
 reset_test_bed
 
-echo "11b) mark source with the lowest uuid on multiple nodes"
-init_test_bed 11
+init_test_bed "mark source with the lowest uuid on multiple nodes"
 touch abc
 chown $USER:$USER abc
 chown root:root /tmp/1/abc
@@ -330,8 +325,7 @@ ls -l /tmp/{0,1,2,3}/abc
 assert_are_equal
 reset_test_bed
 
-echo "12) Make all the replicas fools, it should pick biggest of fools as source"
-init_test_bed 12
+init_test_bed "Make all the replicas fools, it should pick biggest of fools as source"
 touch abc
 setfattr -n trusted.afr.vol-client-0 -v 0sAAAAAAAAAAEAAAAA /tmp/0/abc
 setfattr -n trusted.afr.vol-client-1 -v 0sAAAAAAAAAAEAAAAA /tmp/0/abc
@@ -357,8 +351,7 @@ getfattr -d -m "trusted" -e hex /tmp/{0,1,2,3}/abc
 assert_are_equal
 reset_test_bed
 
-echo "13) If files dont have gfid, readdir should show them , find should fail with EIO because gfid assigning while some children are down is not accepted"
-init_test_bed 13
+init_test_bed "If files dont have gfid, readdir should show them , find should fail with EIO because gfid assigning while some children are down is not accepted"
 touch /tmp/0/{1..10}
 assert_success $?
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
@@ -369,8 +362,7 @@ find | xargs stat
 assert_failure $?
 reset_test_bed
 
-echo "14) If Directories have xattrs with split-brain, impunge should happen for individual files"
-init_test_bed 14
+init_test_bed "If Directories have xattrs with split-brain, impunge should happen for individual files"
 mkdir abc
 cd abc
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
@@ -404,8 +396,7 @@ ls -l /tmp/{0,1,2,3}/abc
 assert_are_equal
 reset_test_bed
 
-#echo "15) If Directories have xattrs with split-brain, then impunge should happen for dir"
-#init_test_bed 15
+#init_test_bed "If Directories have xattrs with split-brain, then impunge should happen for dir"
 #assert_success $?
 #kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 #sleep 1
@@ -425,8 +416,7 @@ reset_test_bed
 #assert_are_equal
 #reset_test_bed
 
-echo "16) If Directories have xattrs with split-brain and mismatching files then impunge should not happen"
-init_test_bed 16
+init_test_bed "If Directories have xattrs with split-brain and mismatching files then impunge should not happen"
 assert_success $?
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 sleep 1
@@ -445,8 +435,7 @@ touch b
 assert_failure $?
 reset_test_bed
 
-echo "17) Make all the replicas fools, it should only do impunge in entry self-heal"
-init_test_bed 17
+init_test_bed "Make all the replicas fools, it should only do impunge in entry self-heal"
 mkdir abc
 cd abc
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
@@ -501,8 +490,7 @@ ls d
 assert_are_equal
 reset_test_bed
 
-echo "18) Make all the replicas fools, it should only do impunge in missing entry self-heal"
-init_test_bed 18
+init_test_bed "Make all the replicas fools, it should only do impunge in missing entry self-heal"
 mkdir abc
 cd abc
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
@@ -561,8 +549,7 @@ ls -l /tmp/{0,1,2,3}/abc
 assert_are_equal
 reset_test_bed
 
-echo "19) Make all the replicas fools, impunge of missing entry self-heal should not happen if they are confliciting"
-init_test_bed 19
+init_test_bed "Make all the replicas fools, impunge of missing entry self-heal should not happen if they are confliciting"
 mkdir abc
 cd abc
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
@@ -601,8 +588,7 @@ assert_failure $?
 getfattr -d -m trusted.gfid -ehex /tmp/{0,1,2,3}/abc/a
 reset_test_bed
 
-echo "20) If Directories don't have pending xattrs, file should not be deleted"
-init_test_bed 20
+init_test_bed "If Directories don't have pending xattrs, file should not be deleted"
 assert_success $?
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 sleep 1
@@ -754,8 +740,7 @@ rm -f /tmp/0/a
 find . | xargs stat
 reset_test_bed
 
-echo "27) Full self-heal of file with holes"
-init_test_bed 27
+init_test_bed "Full self-heal of file with holes"
 gluster volume set vol data-self-heal-algorithm full
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 truncate -s 1M 1
@@ -771,8 +756,7 @@ assert_success $?
 assert_are_equal
 reset_test_bed
 
-echo "28) Full self-heal of file with holes, file smaller than page size (128K)"
-init_test_bed 28
+init_test_bed "Full self-heal of file with holes, file smaller than page size (128K)"
 gluster volume set vol data-self-heal-algorithm full
 dd if=/dev/urandom of=1 count=1 bs=1M
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
@@ -788,8 +772,7 @@ assert_success $?
 assert_are_equal
 reset_test_bed
 
-echo "29) Diff self-heal of file with holes"
-init_test_bed 29
+init_test_bed "Diff self-heal of file with holes"
 gluster volume set vol data-self-heal-algorithm diff
 dd if=/dev/urandom of=1 count=1 bs=1M
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
@@ -807,8 +790,7 @@ assert_failure $?
 assert_are_equal
 reset_test_bed
 
-echo "30) Full self-heal of file with holes"
-init_test_bed 30
+init_test_bed "Full self-heal of file with holes"
 gluster volume set vol data-self-heal-algorithm full
 dd if=/dev/urandom of=1 count=1 bs=1M
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
@@ -825,8 +807,7 @@ assert_success $?
 assert_are_equal
 reset_test_bed
 
-echo "31) Full self-heal of file with holes"
-init_test_bed 31
+init_test_bed "Full self-heal of file with holes"
 gluster volume set vol data-self-heal-algorithm full
 dd if=/dev/urandom of=1 count=1 bs=2M
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
@@ -844,8 +825,7 @@ assert_success $?
 assert_are_equal
 reset_test_bed
 
-echo "32) Delete the stale file test"
-init_test_bed 32
+init_test_bed "Delete the stale file test"
 mkdir a
 cd a
 touch file
@@ -858,8 +838,7 @@ assert_failure $?
 assert_are_equal
 reset_test_bed
 
-echo "33) data self-heal on split-brain tests"
-init_test_bed 33
+init_test_bed "data self-heal on split-brain tests"
 touch a
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
 echo "1" > a
@@ -889,8 +868,7 @@ assert_success $?
 umount /mnt/client1
 reset_test_bed
 
-echo "34) data self-heal off split-brain tests"
-init_test_bed 34
+init_test_bed "data self-heal off split-brain tests"
 gluster volume set vol data-self-heal off
 touch a
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
@@ -921,8 +899,7 @@ assert_success $?
 umount /mnt/client1
 reset_test_bed
 
-echo "35) metadata self-heal on split-brain tests"
-init_test_bed 35
+init_test_bed "metadata self-heal on split-brain tests"
 touch a
 echo "metadata" > a
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
@@ -955,8 +932,7 @@ assert_success $?
 umount /mnt/client1
 reset_test_bed
 
-echo "36) metadata self-heal off split-brain tests"
-init_test_bed 36
+init_test_bed "metadata self-heal off split-brain tests"
 gluster volume set vol metadata-self-heal off
 echo "metadata" > a
 kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
@@ -984,3 +960,5 @@ assert_failure $?
 cd
 umount /mnt/client1
 reset_test_bed
+
+print_failures
