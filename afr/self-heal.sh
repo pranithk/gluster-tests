@@ -838,34 +838,4 @@ assert_failure $?
 assert_are_equal
 reset_test_bed
 
-init_test_bed "data self-heal on split-brain tests"
-touch a
-kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-1.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
-echo "1" > a
-gluster volume start vol force
-sleep 20
-kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-0.pid $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
-echo "2" > a
-gluster volume start vol force
-sleep 20
-kill -9 `cat $WD/vols/vol/run/$HOSTNAME-tmp-2.pid $WD/vols/vol/run/$HOSTNAME-tmp-3.pid`
-cat a
-assert_failure $?
-mkdir /mnt/client1
-mount -t glusterfs $HOSTNAME:/vol /mnt/client1
-cd /mnt/client1
-cat a
-assert_failure $?
-rm -rf /tmp/0/.glusterfs/* /tmp/0/a
-sleep 1
-cat a
-assert_success $?
-[ `cat /tmp/0/a` = `cat /tmp/1/a` ]
-assert_success $?
-cd /mnt/client
-[ `cat a` = "2" ]
-assert_success $?
-umount /mnt/client1
-reset_test_bed
-
 print_failures
